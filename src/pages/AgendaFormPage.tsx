@@ -265,25 +265,26 @@ export default function AgendaFormPage() {
             {form.category === 'AGENDA' && (
               <>
                 <FormField label="시작 날짜" required>
-                  <Input type="date" value={form.agendaStartDate} onChange={(e) => set('agendaStartDate', e.target.value)} />
+                  <Input type="date" value={form.agendaStartDate} onChange={(e) => set('agendaStartDate', e.target.value)} className="w-full" />
                 </FormField>
 
                 <FormField label="마감기한">
-                  <div className="flex gap-2">
-                    <Input
-                      type="date"
-                      value={form.agendaDeadlineDate}
-                      onChange={(e) => set('agendaDeadlineDate', e.target.value)}
-                      className="flex-1"
-                    />
-                    <Select
-                      value={form.agendaDeadlineAmPm}
-                      onChange={(e) => set('agendaDeadlineAmPm', e.target.value as 'AM' | 'PM')}
-                      className="w-24 flex-shrink-0"
-                    >
-                      <option value="AM">오전</option>
-                      <option value="PM">오후</option>
-                    </Select>
+                  <Input type="date" value={form.agendaDeadlineDate} onChange={(e) => set('agendaDeadlineDate', e.target.value)} className="w-full mb-2" />
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['AM', 'PM'] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => set('agendaDeadlineAmPm', v)}
+                        className={`py-2 rounded-lg text-sm font-medium border transition-colors ${
+                          form.agendaDeadlineAmPm === v
+                            ? 'bg-primary-600 text-white border-primary-600'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                        }`}
+                      >
+                        {v === 'AM' ? '오전' : '오후'}
+                      </button>
+                    ))}
                   </div>
                 </FormField>
               </>
@@ -293,27 +294,14 @@ export default function AgendaFormPage() {
             {form.category === 'SCHEDULE' && (
               <>
                 <FormField label="시작" required>
-                  <div className="flex gap-2">
-                    <Input
-                      type="date"
-                      value={form.schedStartDate}
-                      onChange={(e) => set('schedStartDate', e.target.value)}
-                      className="flex-1"
-                    />
-                    <Select
-                      value={form.schedStartHour}
-                      onChange={(e) => set('schedStartHour', e.target.value)}
-                      className="w-20 flex-shrink-0"
-                    >
+                  <Input type="date" value={form.schedStartDate} onChange={(e) => set('schedStartDate', e.target.value)} className="w-full mb-2" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={form.schedStartHour} onChange={(e) => set('schedStartHour', e.target.value)}>
                       {HOURS.map((h) => (
                         <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>
                       ))}
                     </Select>
-                    <Select
-                      value={form.schedStartMinute}
-                      onChange={(e) => set('schedStartMinute', e.target.value)}
-                      className="w-20 flex-shrink-0"
-                    >
+                    <Select value={form.schedStartMinute} onChange={(e) => set('schedStartMinute', e.target.value)}>
                       {MINUTES.map((m) => (
                         <option key={m} value={m}>{m}분</option>
                       ))}
@@ -322,27 +310,14 @@ export default function AgendaFormPage() {
                 </FormField>
 
                 <FormField label="종료" required>
-                  <div className="flex gap-2">
-                    <Input
-                      type="date"
-                      value={form.schedEndDate}
-                      onChange={(e) => set('schedEndDate', e.target.value)}
-                      className="flex-1"
-                    />
-                    <Select
-                      value={form.schedEndHour}
-                      onChange={(e) => set('schedEndHour', e.target.value)}
-                      className="w-20 flex-shrink-0"
-                    >
+                  <Input type="date" value={form.schedEndDate} onChange={(e) => set('schedEndDate', e.target.value)} className="w-full mb-2" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={form.schedEndHour} onChange={(e) => set('schedEndHour', e.target.value)}>
                       {HOURS.map((h) => (
                         <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>
                       ))}
                     </Select>
-                    <Select
-                      value={form.schedEndMinute}
-                      onChange={(e) => set('schedEndMinute', e.target.value)}
-                      className="w-20 flex-shrink-0"
-                    >
+                    <Select value={form.schedEndMinute} onChange={(e) => set('schedEndMinute', e.target.value)}>
                       {MINUTES.map((m) => (
                         <option key={m} value={m}>{m}분</option>
                       ))}
@@ -416,7 +391,7 @@ export default function AgendaFormPage() {
           </FormField>
         </Card>
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex gap-3 justify-end pb-24">
           <Button type="button" variant="secondary" onClick={() => navigate(-1)}>취소</Button>
           <Button type="submit" isLoading={isSubmitting}>{isEdit ? '수정' : '생성'}</Button>
         </div>
