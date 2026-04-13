@@ -14,6 +14,46 @@ const REPORT_METHODS = ['카톡', '통화', '메일', '회의'];
 const HOURS = Array.from({ length: 25 }, (_, i) => i); // 0~24
 const MINUTES = ['00', '30'];
 
+const THIS_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 6 }, (_, i) => THIS_YEAR - 1 + i);
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+function daysInMonth(year: string, month: string) {
+  if (!year || !month) return 31;
+  return new Date(Number(year), Number(month), 0).getDate();
+}
+
+// 날짜 셀렉트 피커 (년/월/일)
+function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [y, m, d] = value ? value.split('-') : ['', '', ''];
+  const maxDay = daysInMonth(y, m);
+  const days = Array.from({ length: maxDay }, (_, i) => i + 1);
+
+  const update = (part: 'y' | 'm' | 'd', val: string) => {
+    const ny = part === 'y' ? val : (y || String(THIS_YEAR));
+    const nm = part === 'm' ? val : (m || '01');
+    const nd = part === 'd' ? val : (d || '01');
+    if (ny && nm && nd) onChange(`${ny}-${nm.padStart(2, '0')}-${nd.padStart(2, '0')}`);
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <Select value={y || ''} onChange={(e) => update('y', e.target.value)}>
+        <option value="">년</option>
+        {YEARS.map((yr) => <option key={yr} value={String(yr)}>{yr}년</option>)}
+      </Select>
+      <Select value={m || ''} onChange={(e) => update('m', e.target.value)}>
+        <option value="">월</option>
+        {MONTHS.map((mo) => <option key={mo} value={String(mo).padStart(2, '0')}>{mo}월</option>)}
+      </Select>
+      <Select value={d || ''} onChange={(e) => update('d', e.target.value)}>
+        <option value="">일</option>
+        {days.map((dy) => <option key={dy} value={String(dy).padStart(2, '0')}>{dy}일</option>)}
+      </Select>
+    </div>
+  );
+}
+
 function toDateStr(iso: string) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('sv-SE'); // YYYY-MM-DD
@@ -265,16 +305,12 @@ export default function AgendaFormPage() {
             {form.category === 'AGENDA' && (
               <>
                 <FormField label="시작 날짜" required>
-                  <div className="w-full overflow-hidden">
-                    <Input type="date" value={form.agendaStartDate} onChange={(e) => set('agendaStartDate', e.target.value)} />
-                  </div>
+                  <DatePicker value={form.agendaStartDate} onChange={(v) => set('agendaStartDate', v)} />
                 </FormField>
 
                 <FormField label="마감기한">
-                  <div className="w-full overflow-hidden mb-2">
-                    <Input type="date" value={form.agendaDeadlineDate} onChange={(e) => set('agendaDeadlineDate', e.target.value)} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <DatePicker value={form.agendaDeadlineDate} onChange={(v) => set('agendaDeadlineDate', v)} />
+                  <div className="grid grid-cols-2 gap-2 mt-2">
                     {(['AM', 'PM'] as const).map((v) => (
                       <button
                         key={v}
@@ -298,10 +334,8 @@ export default function AgendaFormPage() {
             {form.category === 'SCHEDULE' && (
               <>
                 <FormField label="시작" required>
-                  <div className="w-full overflow-hidden mb-2">
-                    <Input type="date" value={form.schedStartDate} onChange={(e) => set('schedStartDate', e.target.value)} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <DatePicker value={form.schedStartDate} onChange={(v) => set('schedStartDate', v)} />
+                  <div className="grid grid-cols-2 gap-2 mt-2">
                     <Select value={form.schedStartHour} onChange={(e) => set('schedStartHour', e.target.value)}>
                       {HOURS.map((h) => (
                         <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>
@@ -316,10 +350,8 @@ export default function AgendaFormPage() {
                 </FormField>
 
                 <FormField label="종료" required>
-                  <div className="w-full overflow-hidden mb-2">
-                    <Input type="date" value={form.schedEndDate} onChange={(e) => set('schedEndDate', e.target.value)} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <DatePicker value={form.schedEndDate} onChange={(v) => set('schedEndDate', v)} />
+                  <div className="grid grid-cols-2 gap-2 mt-2">
                     <Select value={form.schedEndHour} onChange={(e) => set('schedEndHour', e.target.value)}>
                       {HOURS.map((h) => (
                         <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>
