@@ -32,13 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await api.get<ApiResponse<User>>('/users/me');
       setUser(data.data);
     } catch {
-      // 자동로그인 꺼져 있으면 토큰만 제거
-      if (!autoLogin) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      } else {
-        localStorage.clear();
-      }
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -66,7 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshToken = localStorage.getItem('refreshToken');
       await api.post('/auth/logout', { refreshToken });
     } finally {
-      localStorage.clear();
+      // 이메일 히스토리, 아이디저장 등 설정은 유지하고 토큰만 제거
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       setUser(null);
     }
   };
