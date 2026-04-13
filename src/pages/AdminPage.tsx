@@ -60,6 +60,7 @@ interface PendingUser {
   name: string;
   email: string;
   position: string | null;
+  phone: string | null;
   createdAt: string;
   department: { name: string } | null;
   team: { name: string } | null;
@@ -134,7 +135,7 @@ export function AdminApprovals() {
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{user.email}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  {user.department?.name ?? '-'} · {user.team?.name ?? '-'}
+                  {user.department?.name ?? '-'} · {user.team?.name ?? '-'} · {user.phone ?? '-'}
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0">

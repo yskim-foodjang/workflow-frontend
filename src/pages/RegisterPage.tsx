@@ -14,6 +14,7 @@ export default function RegisterPage() {
     factoryName: '',
     teamName: '',
     position: '',
+    phone: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -42,7 +43,8 @@ export default function RegisterPage() {
         name: form.name,
         factoryName: form.factoryName,
         teamName: form.teamName,
-        position: form.position || undefined,
+        position: form.position,
+        phone: form.phone,
       });
       setDone(true);
     } catch (err: any) {
@@ -118,7 +120,7 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">공장 *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">부서(공장) *</label>
                   <input type="text" value={form.factoryName} onChange={set('factoryName')} className="input-field" placeholder="○○공장" required />
                 </div>
                 <div>
@@ -127,9 +129,15 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">직책</label>
-                <input type="text" value={form.position} onChange={set('position')} className="input-field" placeholder="사원 (선택)" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">직책 *</label>
+                  <input type="text" value={form.position} onChange={set('position')} className="input-field" placeholder="사원" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">핸드폰번호 *</label>
+                  <input type="tel" value={form.phone} onChange={set('phone')} className="input-field" placeholder="010-0000-0000" required />
+                </div>
               </div>
 
               <div>
