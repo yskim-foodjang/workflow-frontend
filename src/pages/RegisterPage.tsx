@@ -24,6 +24,17 @@ export default function RegisterPage() {
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const handlePhone = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+    let formatted = digits;
+    if (digits.length > 3 && digits.length <= 7) {
+      formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else if (digits.length > 7) {
+      formatted = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    }
+    setForm((f) => ({ ...f, phone: formatted }));
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (form.password !== form.passwordConfirm) {
@@ -136,7 +147,7 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">핸드폰번호 *</label>
-                  <input type="tel" value={form.phone} onChange={set('phone')} className="input-field" placeholder="010-0000-0000" required />
+                  <input type="tel" value={form.phone} onChange={handlePhone} className="input-field" placeholder="010-0000-0000" required />
                 </div>
               </div>
 
