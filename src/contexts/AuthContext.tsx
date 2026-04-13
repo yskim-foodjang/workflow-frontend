@@ -17,6 +17,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('accessToken');
+    const autoLogin = localStorage.getItem('wf_auto_login') === 'true';
+
+    // 자동로그인 꺼져 있으면 토큰 제거 후 로그아웃 상태 유지
+    if (!autoLogin && !token) {
+      setIsLoading(false);
+      return;
+    }
     if (!token) {
       setIsLoading(false);
       return;
@@ -25,7 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await api.get<ApiResponse<User>>('/users/me');
       setUser(data.data);
     } catch {
-      localStorage.clear();
+      // 자동로그인 꺼져 있으면 토큰만 제거
+      if (!autoLogin) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      } else {
+        localStorage.clear();
+      }
       setUser(null);
     } finally {
       setIsLoading(false);

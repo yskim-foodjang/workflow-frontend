@@ -15,6 +15,8 @@ import AgendaDetailPage from '@/pages/AgendaDetailPage';
 import AdminPage, { AdminOverview, AdminApprovals } from '@/pages/AdminPage';
 import InstallPage from '@/pages/InstallPage';
 import RegisterPage from '@/pages/RegisterPage';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -62,6 +64,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/install" element={<InstallPage />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
 
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
