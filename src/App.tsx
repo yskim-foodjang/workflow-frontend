@@ -12,8 +12,9 @@ import NotificationsPage from '@/pages/NotificationsPage';
 import ProfilePage from '@/pages/ProfilePage';
 import AgendaFormPage from '@/pages/AgendaFormPage';
 import AgendaDetailPage from '@/pages/AgendaDetailPage';
-import AdminPage, { AdminOverview } from '@/pages/AdminPage';
+import AdminPage, { AdminOverview, AdminApprovals } from '@/pages/AdminPage';
 import InstallPage from '@/pages/InstallPage';
+import RegisterPage from '@/pages/RegisterPage';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -60,6 +61,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/install" element={<InstallPage />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
 
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -74,6 +76,7 @@ function AppRoutes() {
 
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>}>
           <Route index element={<AdminOverview />} />
+          <Route path="approvals" element={<AdminApprovals />} />
           <Route path="users" element={<AdminOverview />} />
           <Route path="departments" element={<AdminOverview />} />
           <Route path="stats" element={<AdminOverview />} />

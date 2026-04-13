@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { APP_NAME, APP_DESCRIPTION } from '@/config/app';
@@ -25,8 +25,15 @@ export default function LoginPage() {
       await login(email, password);
       toast.success('로그인되었습니다.');
       navigate('/dashboard');
-    } catch {
-      toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
+    } catch (err: any) {
+      const code = err.response?.data?.error?.code;
+      if (code === 'PENDING_APPROVAL') {
+        toast.error('관리자 승인 대기 중입니다.');
+      } else if (code === 'REJECTED') {
+        toast.error('가입이 거절되었습니다. 관리자에게 문의하세요.');
+      } else {
+        toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -123,8 +130,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">
-          계정이 없으신가요? 관리자에게 문의하세요.
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
+          계정이 없으신가요?{' '}
+          <Link to="/register" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium">
+            회원가입
+          </Link>
         </p>
       </div>
     </div>
