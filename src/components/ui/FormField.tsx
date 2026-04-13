@@ -44,9 +44,10 @@ export function Input({ icon, className, ...props }: InputProps) {
   return (
     <input
       className={clsx(
-        'w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow duration-150',
+        'w-full min-w-0 px-3.5 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow duration-150',
         className
       )}
+      style={{ maxWidth: '100%', boxSizing: 'border-box' }}
       {...props}
     />
   );
