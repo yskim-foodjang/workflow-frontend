@@ -265,11 +265,11 @@ export default function AgendaFormPage() {
             {form.category === 'AGENDA' && (
               <>
                 <FormField label="시작 날짜" required>
-                  <Input type="date" value={form.agendaStartDate} onChange={(e) => set('agendaStartDate', e.target.value)} className="w-full" />
+                  <Input type="date" value={form.agendaStartDate} onChange={(e) => set('agendaStartDate', e.target.value)} className="w-full max-w-full block" />
                 </FormField>
 
                 <FormField label="마감기한">
-                  <Input type="date" value={form.agendaDeadlineDate} onChange={(e) => set('agendaDeadlineDate', e.target.value)} className="w-full mb-2" />
+                  <Input type="date" value={form.agendaDeadlineDate} onChange={(e) => set('agendaDeadlineDate', e.target.value)} className="w-full max-w-full block mb-2" />
                   <div className="grid grid-cols-2 gap-2">
                     {(['AM', 'PM'] as const).map((v) => (
                       <button
@@ -294,7 +294,7 @@ export default function AgendaFormPage() {
             {form.category === 'SCHEDULE' && (
               <>
                 <FormField label="시작" required>
-                  <Input type="date" value={form.schedStartDate} onChange={(e) => set('schedStartDate', e.target.value)} className="w-full mb-2" />
+                  <Input type="date" value={form.schedStartDate} onChange={(e) => set('schedStartDate', e.target.value)} className="w-full max-w-full block mb-2" />
                   <div className="grid grid-cols-2 gap-2">
                     <Select value={form.schedStartHour} onChange={(e) => set('schedStartHour', e.target.value)}>
                       {HOURS.map((h) => (
@@ -310,7 +310,7 @@ export default function AgendaFormPage() {
                 </FormField>
 
                 <FormField label="종료" required>
-                  <Input type="date" value={form.schedEndDate} onChange={(e) => set('schedEndDate', e.target.value)} className="w-full mb-2" />
+                  <Input type="date" value={form.schedEndDate} onChange={(e) => set('schedEndDate', e.target.value)} className="w-full max-w-full block mb-2" />
                   <div className="grid grid-cols-2 gap-2">
                     <Select value={form.schedEndHour} onChange={(e) => set('schedEndHour', e.target.value)}>
                       {HOURS.map((h) => (

@@ -35,7 +35,7 @@ export default function Layout() {
 
       <div className="lg:pl-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="p-4 lg:p-6">
+        <main className="p-4 pb-24 lg:p-6 lg:pb-6">
           <Outlet />
         </main>
       </div>
