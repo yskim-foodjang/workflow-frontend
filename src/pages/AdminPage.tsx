@@ -55,6 +55,111 @@ export function AdminOverview() {
   );
 }
 
+interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  position: string | null;
+  phone: string | null;
+  role: string;
+  status: string;
+  department: { name: string } | null;
+  team: { name: string } | null;
+}
+
+export function AdminUsers() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    api.get('/admin/users')
+      .then(({ data }) => setUsers(data.data))
+      .catch(() => toast.error('목록을 불러오지 못했습니다.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleReset = async () => {
+    if (!resetTarget) return;
+    if (newPassword.length < 8) { toast.error('비밀번호는 8자 이상이어야 합니다.'); return; }
+    setProcessing(true);
+    try {
+      await api.patch(`/admin/users/${resetTarget.id}/reset-password`, { password: newPassword });
+      toast.success(`${resetTarget.name}님의 비밀번호가 초기화되었습니다.`);
+      setResetTarget(null);
+      setNewPassword('');
+    } catch {
+      toast.error('초기화에 실패했습니다.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  if (loading) return <Card><div className="flex justify-center py-10"><svg className="animate-spin w-6 h-6 text-primary-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg></div></Card>;
+
+  return (
+    <>
+      <Card>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">사용자 목록</h2>
+        {users.length === 0 ? (
+          <p className="text-center text-slate-400 py-10">등록된 사용자가 없습니다.</p>
+        ) : (
+          <div className="space-y-3">
+            {users.map((user) => (
+              <div key={user.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-900 dark:text-white">{user.name}</span>
+                    {user.role === 'ADMIN' && <span className="text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full">관리자</span>}
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{user.email}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    {user.department?.name ?? '-'} · {user.team?.name ?? '-'} · {user.position ?? '-'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setResetTarget(user); setNewPassword(''); }}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors flex-shrink-0"
+                >
+                  비밀번호 초기화
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* 비밀번호 초기화 모달 */}
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-1">비밀번호 초기화</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              <strong>{resetTarget.name}</strong>님의 새 비밀번호를 입력하세요.
+            </p>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="input-field w-full mb-4"
+              placeholder="8자 이상"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setResetTarget(null)} className="flex-1 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300">취소</button>
+              <button onClick={handleReset} disabled={processing} className="flex-1 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium disabled:opacity-50">
+                {processing ? '처리 중...' : '초기화'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 interface PendingUser {
   id: string;
   name: string;

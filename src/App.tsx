@@ -12,7 +12,7 @@ import NotificationsPage from '@/pages/NotificationsPage';
 import ProfilePage from '@/pages/ProfilePage';
 import AgendaFormPage from '@/pages/AgendaFormPage';
 import AgendaDetailPage from '@/pages/AgendaDetailPage';
-import AdminPage, { AdminOverview, AdminApprovals } from '@/pages/AdminPage';
+import AdminPage, { AdminOverview, AdminApprovals, AdminUsers } from '@/pages/AdminPage';
 import InstallPage from '@/pages/InstallPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
@@ -81,7 +81,7 @@ function AppRoutes() {
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>}>
           <Route index element={<AdminOverview />} />
           <Route path="approvals" element={<AdminApprovals />} />
-          <Route path="users" element={<AdminOverview />} />
+          <Route path="users" element={<AdminUsers />} />
           <Route path="departments" element={<AdminOverview />} />
           <Route path="stats" element={<AdminOverview />} />
         </Route>

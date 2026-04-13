@@ -230,9 +230,9 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-4 text-center">
-            <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
-              비밀번호를 잊으셨나요?
-            </Link>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              비밀번호를 잊으셨나요? 관리자에게 문의하세요.
+            </p>
           </div>
         </div>
 
