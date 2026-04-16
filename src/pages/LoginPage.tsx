@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { APP_NAME, APP_DESCRIPTION } from '@/config/app';
 import toast from 'react-hot-toast';
 
+
 const SAVED_EMAIL_KEY = 'wf_saved_email';
 const SAVE_ID_KEY = 'wf_save_id';
 const AUTO_LOGIN_KEY = 'wf_auto_login';
@@ -27,10 +28,12 @@ export default function LoginPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [emailHistory, setEmailHistory] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,9 +57,10 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { toast.error('이메일과 비밀번호를 입력해주세요.'); return; }
+    if (!email || !password) { setErrorMsg('이메일과 비밀번호를 입력해주세요.'); return; }
 
     setIsSubmitting(true);
+    setErrorMsg('');
     try {
       await login(email, password);
 
@@ -79,9 +83,16 @@ export default function LoginPage() {
       navigate('/dashboard');
     } catch (err: any) {
       const code = err.response?.data?.error?.code;
-      if (code === 'PENDING_APPROVAL') toast.error('관리자 승인 대기 중입니다.');
-      else if (code === 'REJECTED') toast.error('가입이 거절되었습니다. 관리자에게 문의하세요.');
-      else toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
+      if (code === 'PENDING_APPROVAL') {
+        setErrorMsg('관리자 승인 대기 중입니다.');
+      } else if (code === 'REJECTED') {
+        setErrorMsg('가입이 거절되었습니다. 관리자에게 문의하세요.');
+      } else {
+        setErrorMsg('비밀번호가 올바르지 않습니다. 다시 입력해주세요.');
+      }
+      // 비밀번호만 초기화 후 포커스
+      setPassword('');
+      setTimeout(() => passwordRef.current?.focus(), 0);
     } finally {
       setIsSubmitting(false);
     }
@@ -180,14 +191,23 @@ export default function LoginPage() {
                 비밀번호
               </label>
               <input
+                ref={passwordRef}
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
+                onChange={(e) => { setPassword(e.target.value); if (errorMsg) setErrorMsg(''); }}
+                className={`input-field ${errorMsg ? 'border-rose-400 dark:border-rose-500 focus:ring-rose-400' : ''}`}
                 placeholder="비밀번호를 입력하세요"
                 autoComplete="current-password"
               />
+              {errorMsg && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-sm text-rose-500 dark:text-rose-400">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errorMsg}
+                </p>
+              )}
             </div>
 
             {/* 아이디 저장 / 자동로그인 */}
