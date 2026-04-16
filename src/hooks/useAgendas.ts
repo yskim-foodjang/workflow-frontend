@@ -3,6 +3,7 @@ import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
   type InfiniteData,
 } from '@tanstack/react-query';
 import api from '@/utils/api';
@@ -51,7 +52,9 @@ export function useAgendas(options: AgendaListFilters = {}) {
     },
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
-    staleTime: 60_000,   // 1분: 페이지 이동 시 깜빡임 없음
+    staleTime: 5 * 60_000,   // 5분: 페이지 이동/재방문 시 즉시 표시
+    // 필터 바꿀 때 기존 데이터 유지 → 깜빡임(blank) 완전 제거
+    placeholderData: keepPreviousData,
   });
 
   const agendas = result.data?.pages.flatMap((p) => p.items) ?? [];
@@ -80,7 +83,7 @@ export function useAgenda(id: string | undefined) {
       return data.data;
     },
     enabled: Boolean(id),
-    staleTime: 30_000,   // 30초
+    staleTime: 5 * 60_000,   // 5분
   });
 
   return {
