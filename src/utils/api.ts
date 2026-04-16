@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { ApiResponse, AuthTokens } from '@/types';
+import { getAccessToken, getRefreshToken, setTokens, clearTokens, isTokenPersisted } from './tokenStorage';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api',
@@ -8,7 +9,7 @@ const api = axios.create({
 
 // Request interceptor: attach access token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -51,10 +52,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = getRefreshToken();
       if (!refreshToken) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        clearTokens();
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -65,16 +65,15 @@ api.interceptors.response.use(
         });
 
         const { accessToken, refreshToken: newRefresh } = data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefresh);
+        // 원래 저장 위치(localStorage or sessionStorage)에 그대로 갱신
+        setTokens(accessToken, newRefresh, isTokenPersisted());
 
         processQueue(null, accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        clearTokens();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

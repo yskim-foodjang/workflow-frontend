@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import api from '@/utils/api';
+import { getAccessToken, setTokens, clearTokens } from '@/utils/tokenStorage';
 import type { User, LoginResponse, ApiResponse } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, persist?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -16,14 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    const autoLogin = localStorage.getItem('wf_auto_login') === 'true';
-
-    // 자동로그인 꺼져 있으면 토큰 제거 후 로그아웃 상태 유지
-    if (!autoLogin && !token) {
-      setIsLoading(false);
-      return;
-    }
+    const token = getAccessToken();
     if (!token) {
       setIsLoading(false);
       return;
@@ -32,8 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await api.get<ApiResponse<User>>('/users/me');
       setUser(data.data);
     } catch {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      clearTokens();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -44,26 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
-  const login = async (email: string, password: string) => {
-    const { data } = await api.post<ApiResponse<LoginResponse>>('/auth/login', {
-      email,
-      password,
-    });
-
+  const login = async (email: string, password: string, persist = false) => {
+    const { data } = await api.post<ApiResponse<LoginResponse>>('/auth/login', { email, password });
     const { accessToken, refreshToken, user: userData } = data.data;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    setTokens(accessToken, refreshToken, persist);
     setUser(userData);
   };
 
   const logout = async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = getAccessToken();
       await api.post('/auth/logout', { refreshToken });
     } finally {
-      // 이메일 히스토리, 아이디저장 등 설정은 유지하고 토큰만 제거
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      clearTokens();
       setUser(null);
     }
   };

@@ -62,7 +62,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setErrorMsg('');
     try {
-      await login(email, password);
+      await login(email, password, autoLogin);
 
       // 아이디 저장
       if (saveId) {
