@@ -231,7 +231,8 @@ export function useToggleComplete(id: string) {
       toast.error('상태 변경에 실패했습니다.');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.detail(id) });
+      // detail + lists + dashboard 모두 갱신
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.all });
     },
   });
 }
