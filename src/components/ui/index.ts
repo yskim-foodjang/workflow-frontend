@@ -9,4 +9,12 @@ export type { UploadedFile } from './FileUpload';
 export { FormField, Input, Select, Textarea } from './FormField';
 export { default as Modal } from './Modal';
 export { default as PageHeader } from './PageHeader';
-export { default as Skeleton, SkeletonCard, SkeletonList } from './Skeleton';
+export {
+  default as Skeleton,
+  SkeletonCard,
+  SkeletonList,
+  AgendaCardSkeleton,
+  AgendaListSkeleton,
+  StatCardSkeleton,
+  AgendaDetailSkeleton,
+} from './Skeleton';

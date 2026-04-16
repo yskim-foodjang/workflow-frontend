@@ -1,6 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import api from '@/utils/api';
 import type { Agenda, ApiResponse } from '@/types';
+import { queryKeys, type AgendaListFilters } from '@/lib/queryKeys';
+import toast from 'react-hot-toast';
+
+// ─── 내부 타입 ────────────────────────────────────────────────────────────────
 
 interface AgendaListResponse {
   items: Agenda[];
@@ -8,87 +18,215 @@ interface AgendaListResponse {
   hasMore: boolean;
 }
 
-interface UseAgendasOptions {
-  search?: string;
-  category?: string;
-  type?: string;
-  priority?: string;
-  visibility?: string;
-  completed?: string;
-  limit?: number;
+// ─── 유틸 ─────────────────────────────────────────────────────────────────────
+
+function buildParams(options: AgendaListFilters, cursor?: string | null): string {
+  const params = new URLSearchParams();
+  if (options.search)     params.set('search', options.search);
+  if (options.category)   params.set('category', options.category);
+  if (options.type)       params.set('type', options.type);
+  if (options.priority)   params.set('priority', options.priority);
+  if (options.visibility) params.set('visibility', options.visibility);
+  if (options.completed)  params.set('completed', options.completed);
+  if (options.limit)      params.set('limit', String(options.limit));
+  if (cursor)             params.set('cursor', cursor);
+  return params.toString();
 }
 
-export function useAgendas(options: UseAgendasOptions = {}) {
-  const [agendas, setAgendas] = useState<Agenda[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+// ─── 목록 조회 (무한 스크롤 + 캐싱) ─────────────────────────────────────────
 
-  const fetchAgendas = useCallback(async (cursor?: string) => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (options.search) params.set('search', options.search);
-      if (options.category) params.set('category', options.category);
-      if (options.type) params.set('type', options.type);
-      if (options.priority) params.set('priority', options.priority);
-      if (options.visibility) params.set('visibility', options.visibility);
-      if (options.completed) params.set('completed', options.completed);
-      if (options.limit) params.set('limit', String(options.limit));
-      if (cursor) params.set('cursor', cursor);
+export function useAgendas(options: AgendaListFilters = {}) {
+  const result = useInfiniteQuery<
+    AgendaListResponse,
+    Error,
+    InfiniteData<AgendaListResponse>,
+    ReturnType<typeof queryKeys.agendas.list>,
+    string | null
+  >({
+    queryKey: queryKeys.agendas.list(options),
+    queryFn: async ({ pageParam }) => {
+      const qs = buildParams(options, pageParam);
+      const { data } = await api.get<ApiResponse<AgendaListResponse>>(`/agendas?${qs}`);
+      return data.data;
+    },
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
+    staleTime: 60_000,   // 1분: 페이지 이동 시 깜빡임 없음
+  });
 
-      const { data } = await api.get<ApiResponse<AgendaListResponse>>(`/agendas?${params}`);
-      const result = data.data;
+  const agendas = result.data?.pages.flatMap((p) => p.items) ?? [];
+  const pages = result.data?.pages ?? [];
+  const hasMore = pages.length > 0 ? (pages[pages.length - 1]?.hasMore ?? false) : false;
 
-      if (cursor) {
-        setAgendas((prev) => [...prev, ...result.items]);
-      } else {
-        setAgendas(result.items);
-      }
-      setNextCursor(result.nextCursor);
-      setHasMore(result.hasMore);
-    } catch {
-      // error handled by interceptor
-    } finally {
-      setIsLoading(false);
-    }
-  }, [options.search, options.category, options.type, options.priority, options.visibility, options.completed, options.limit]);
-
-  useEffect(() => {
-    fetchAgendas();
-  }, [fetchAgendas]);
-
-  const loadMore = () => {
-    if (nextCursor && hasMore) {
-      fetchAgendas(nextCursor);
-    }
+  return {
+    agendas,
+    isLoading: result.isLoading,
+    isFetchingMore: result.isFetchingNextPage,
+    hasMore,
+    loadMore: () => {
+      if (hasMore && !result.isFetchingNextPage) result.fetchNextPage();
+    },
+    refresh: () => result.refetch(),
   };
-
-  const refresh = () => fetchAgendas();
-
-  return { agendas, isLoading, hasMore, loadMore, refresh };
 }
+
+// ─── 단건 조회 ────────────────────────────────────────────────────────────────
 
 export function useAgenda(id: string | undefined) {
-  const [agenda, setAgenda] = useState<Agenda | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchAgenda = useCallback(async () => {
-    if (!id) return;
-    setIsLoading(true);
-    try {
+  const result = useQuery({
+    queryKey: id ? queryKeys.agendas.detail(id) : ['agendas', '__none__'],
+    queryFn: async () => {
       const { data } = await api.get<ApiResponse<Agenda>>(`/agendas/${id}`);
-      setAgenda(data.data);
-    } catch {
-      setAgenda(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
+      return data.data;
+    },
+    enabled: Boolean(id),
+    staleTime: 30_000,   // 30초
+  });
 
-  useEffect(() => {
-    fetchAgenda();
-  }, [fetchAgenda]);
+  return {
+    agenda: result.data ?? null,
+    isLoading: result.isLoading,
+    refresh: () => result.refetch(),
+  };
+}
 
-  return { agenda, isLoading, refresh: fetchAgenda };
+// ─── 생성 ─────────────────────────────────────────────────────────────────────
+
+export function useCreateAgenda() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.post<ApiResponse<Agenda>>('/agendas', payload);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.lists() });
+    },
+  });
+}
+
+// ─── 수정 ─────────────────────────────────────────────────────────────────────
+
+export function useUpdateAgenda(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.put<ApiResponse<Agenda>>(`/agendas/${id}`, payload);
+      return data.data;
+    },
+    onSuccess: (updated) => {
+      // 상세 캐시 즉시 업데이트 (재요청 불필요)
+      queryClient.setQueryData<Agenda>(queryKeys.agendas.detail(id), updated);
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.lists() });
+    },
+  });
+}
+
+// ─── 삭제 (낙관적 업데이트) ───────────────────────────────────────────────────
+
+export function useDeleteAgenda() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/agendas/${id}`),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.agendas.lists() });
+
+      const previousLists = queryClient.getQueriesData<InfiniteData<AgendaListResponse>>({
+        queryKey: queryKeys.agendas.lists(),
+      });
+
+      // 낙관적으로 목록에서 즉시 제거
+      queryClient.setQueriesData<InfiniteData<AgendaListResponse>>(
+        { queryKey: queryKeys.agendas.lists() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.filter((a) => a.id !== id),
+            })),
+          };
+        }
+      );
+
+      return { previousLists };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousLists) {
+        context.previousLists.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+      toast.error('삭제에 실패했습니다.');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.lists() });
+    },
+  });
+}
+
+// ─── 완료 토글 (낙관적 업데이트) ─────────────────────────────────────────────
+
+export function useToggleComplete(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api.patch(`/agendas/${id}/complete`),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.agendas.detail(id) });
+      await queryClient.cancelQueries({ queryKey: queryKeys.agendas.lists() });
+
+      const previousDetail = queryClient.getQueryData<Agenda>(
+        queryKeys.agendas.detail(id)
+      );
+      const previousLists = queryClient.getQueriesData<InfiniteData<AgendaListResponse>>({
+        queryKey: queryKeys.agendas.lists(),
+      });
+
+      // 상세 페이지 낙관적 업데이트
+      if (previousDetail) {
+        queryClient.setQueryData<Agenda>(queryKeys.agendas.detail(id), {
+          ...previousDetail,
+          isCompleted: !previousDetail.isCompleted,
+        });
+      }
+
+      // 목록 낙관적 업데이트
+      queryClient.setQueriesData<InfiniteData<AgendaListResponse>>(
+        { queryKey: queryKeys.agendas.lists() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((a) =>
+                a.id === id ? { ...a, isCompleted: !a.isCompleted } : a
+              ),
+            })),
+          };
+        }
+      );
+
+      return { previousDetail, previousLists };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(queryKeys.agendas.detail(id), context.previousDetail);
+      }
+      if (context?.previousLists) {
+        context.previousLists.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+      toast.error('상태 변경에 실패했습니다.');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.detail(id) });
+    },
+  });
 }

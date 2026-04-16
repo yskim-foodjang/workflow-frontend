@@ -7,10 +7,12 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventInput, DateSelectArg, EventClickArg, DatesSetArg, EventContentArg } from '@fullcalendar/core';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
 import { AGENDA_TYPE_COLORS, AGENDA_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS } from '@/utils/constants';
 import { BRAND_COLOR, BRAND_PALETTE } from '@/config/app';
 import { Card } from '@/components/ui';
+import { queryKeys } from '@/lib/queryKeys';
 import type { Agenda, ApiResponse } from '@/types';
 
 // 일정(SCHEDULE) 전용 색상 - teal 계열
@@ -291,38 +293,63 @@ function InfoRow({
 
 export default function CalendarView() {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<EventInput[]>([]);
+  const queryClient = useQueryClient();
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [selectedAgenda, setSelectedAgenda] = useState<Agenda | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
 
-  const fetchEvents = useCallback(async (start: string, end: string) => {
-    try {
-      const { data } = await api.get<ApiResponse<Agenda[]>>(`/agendas/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
-      const mapped: EventInput[] = data.data.map((agenda) => {
-        const isSchedule = agenda.category === 'SCHEDULE';
-        const color = isSchedule ? SCHEDULE_COLOR : (AGENDA_TYPE_COLORS[agenda.type] || BRAND_COLOR);
-        return {
-          id: agenda.id,
-          title: agenda.title,
-          start: agenda.startAt,
-          ...(agenda.endAt ? { end: agenda.endAt } : {}),
-          backgroundColor: isSchedule ? `${SCHEDULE_COLOR}18` : `${color}18`,
-          borderColor: color,
-          textColor: color,
-          extendedProps: { agenda },
-          // 일정은 시간 표시, 아젠다는 종일 이벤트처럼
-          allDay: !isSchedule,
-        };
-      });
-      setEvents(mapped);
-    } catch {
-      // handled by interceptor
-    }
-  }, []);
+  // useQuery로 캘린더 데이터 캐싱 (월 이동 시 깜빡임 없음)
+  const { data: calendarAgendas } = useQuery({
+    queryKey: dateRange
+      ? queryKeys.agendas.calendar(dateRange.start, dateRange.end)
+      : ['agendas', 'calendar', 'init'],
+    queryFn: async () => {
+      if (!dateRange) return [];
+      const { data } = await api.get<ApiResponse<Agenda[]>>(
+        `/agendas/calendar?start=${encodeURIComponent(dateRange.start)}&end=${encodeURIComponent(dateRange.end)}`
+      );
+      return data.data;
+    },
+    enabled: Boolean(dateRange),
+    staleTime: 5 * 60_000,   // 5분 캐시 (캘린더는 자주 바뀌지 않음)
+  });
+
+  // 캘린더 이벤트로 변환
+  const events: EventInput[] = (calendarAgendas ?? []).map((agenda) => {
+    const isSchedule = agenda.category === 'SCHEDULE';
+    const color = isSchedule ? SCHEDULE_COLOR : (AGENDA_TYPE_COLORS[agenda.type] || BRAND_COLOR);
+    return {
+      id: agenda.id,
+      title: agenda.title,
+      start: agenda.startAt,
+      ...(agenda.endAt ? { end: agenda.endAt } : {}),
+      backgroundColor: isSchedule ? `${SCHEDULE_COLOR}18` : `${color}18`,
+      borderColor: color,
+      textColor: color,
+      extendedProps: { agenda },
+      allDay: !isSchedule,
+    };
+  });
 
   const handleDatesSet = useCallback((arg: DatesSetArg) => {
-    fetchEvents(arg.startStr, arg.endStr);
-  }, [fetchEvents]);
+    const newRange = { start: arg.startStr, end: arg.endStr };
+    setDateRange(newRange);
+    // 이전/다음 달 데이터를 미리 prefetch
+    const nextStart = new Date(arg.startStr);
+    nextStart.setMonth(nextStart.getMonth() + 1);
+    const nextEnd = new Date(arg.endStr);
+    nextEnd.setMonth(nextEnd.getMonth() + 1);
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.agendas.calendar(nextStart.toISOString(), nextEnd.toISOString()),
+      queryFn: async () => {
+        const { data } = await api.get<ApiResponse<Agenda[]>>(
+          `/agendas/calendar?start=${encodeURIComponent(nextStart.toISOString())}&end=${encodeURIComponent(nextEnd.toISOString())}`
+        );
+        return data.data;
+      },
+      staleTime: 5 * 60_000,
+    });
+  }, [queryClient]);
 
   const handleSelect = useCallback((selectInfo: DateSelectArg) => {
     const start = selectInfo.startStr;

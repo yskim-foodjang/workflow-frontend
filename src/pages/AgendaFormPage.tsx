@@ -1,9 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '@/utils/api';
-import { useAgenda } from '@/hooks/useAgendas';
+import { useAgenda, useCreateAgenda, useUpdateAgenda } from '@/hooks/useAgendas';
 import { AGENDA_TYPE_LABELS, PRIORITY_LABELS, RECURRENCE_LABELS, CATEGORY_LABELS } from '@/utils/constants';
-import type { ApiResponse, Agenda, User, RecurrenceConfig, AgendaCategory } from '@/types';
+import type { User, RecurrenceConfig, AgendaCategory } from '@/types';
 import toast from 'react-hot-toast';
 import { Button, Card, PageHeader, FileUpload } from '@/components/ui';
 import type { UploadedFile } from '@/components/ui';
@@ -11,7 +11,7 @@ import { FormField, Input, Select, Textarea } from '@/components/ui/FormField';
 import { TagInput, ParticipantPicker } from '@/components/agenda';
 
 const REPORT_METHODS = ['카톡', '통화', '메일', '회의'];
-const HOURS = Array.from({ length: 25 }, (_, i) => i); // 0~24
+const HOURS = Array.from({ length: 25 }, (_, i) => i);
 const MINUTES = ['00', '30'];
 
 const THIS_YEAR = new Date().getFullYear();
@@ -23,7 +23,6 @@ function daysInMonth(year: string, month: string) {
   return new Date(Number(year), Number(month), 0).getDate();
 }
 
-// 날짜 셀렉트 피커 (년/월/일)
 function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [y, m, d] = value ? value.split('-') : ['', '', ''];
   const maxDay = daysInMonth(y, m);
@@ -56,7 +55,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
 function toDateStr(iso: string) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('sv-SE'); // YYYY-MM-DD
+  return new Date(iso).toLocaleDateString('sv-SE');
 }
 
 function toHour(iso: string) {
@@ -85,11 +84,9 @@ interface FormData {
   title: string;
   type: string;
   description: string;
-  // AGENDA
   agendaStartDate: string;
   agendaDeadlineDate: string;
   agendaDeadlineAmPm: 'AM' | 'PM';
-  // SCHEDULE
   schedStartDate: string;
   schedStartHour: string;
   schedStartMinute: string;
@@ -119,14 +116,32 @@ const emptyForm: FormData = {
 
 export default function AgendaFormPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const { agenda } = useAgenda(isEdit ? id : undefined);
 
-  const [form, setForm] = useState<FormData>(emptyForm);
+  const createAgenda = useCreateAgenda();
+  const updateAgenda = useUpdateAgenda(id ?? '');
+
+  const [form, setForm] = useState<FormData>(() => {
+    // URL 파라미터에서 날짜 초기값 설정 (캘린더에서 클릭 시)
+    const startParam = searchParams.get('start');
+    if (startParam) {
+      const d = new Date(startParam);
+      const dateStr = d.toLocaleDateString('sv-SE');
+      return {
+        ...emptyForm,
+        schedStartDate: dateStr,
+        schedEndDate: dateStr,
+      };
+    }
+    return emptyForm;
+  });
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [uploadFiles, setUploadFiles] = useState<UploadedFile[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isSubmitting = createAgenda.isPending || updateAgenda.isPending;
 
   useEffect(() => {
     if (agenda && isEdit) {
@@ -136,13 +151,11 @@ export default function AgendaFormPage() {
         title: agenda.title,
         type: agenda.type,
         description: agenda.description || '',
-        // AGENDA
         agendaStartDate: isAgenda ? toDateStr(agenda.startAt) : '',
         agendaDeadlineDate: isAgenda && agenda.deadline ? toDateStr(agenda.deadline) : '',
         agendaDeadlineAmPm: isAgenda && agenda.deadline
           ? (new Date(agenda.deadline).getHours() < 13 ? 'AM' : 'PM')
           : 'AM',
-        // SCHEDULE
         schedStartDate: !isAgenda ? toDateStr(agenda.startAt) : '',
         schedStartHour: !isAgenda ? toHour(agenda.startAt) : '9',
         schedStartMinute: !isAgenda ? toMinute(agenda.startAt) : '00',
@@ -199,36 +212,37 @@ export default function AgendaFormPage() {
       endAt = buildDateTime(form.schedEndDate, form.schedEndHour, form.schedEndMinute);
     }
 
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        category: form.category,
-        title: form.title,
-        type: form.type,
-        description: form.description || undefined,
-        startAt,
-        endAt,
-        deadline,
-        recurrence: form.recurrence,
-        priority: form.priority,
-        visibility: 'PRIVATE',
-        location: form.location || undefined,
-        onlineLink: form.onlineLink || undefined,
-        reportMethod: form.reportMethod || undefined,
-        isNotice: form.isNotice,
-        tags: form.tags,
-        participantIds: form.participantIds,
-      };
+    const payload = {
+      category: form.category,
+      title: form.title,
+      type: form.type,
+      description: form.description || undefined,
+      startAt,
+      endAt,
+      deadline,
+      recurrence: form.recurrence,
+      priority: form.priority,
+      visibility: 'PRIVATE',
+      location: form.location || undefined,
+      onlineLink: form.onlineLink || undefined,
+      reportMethod: form.reportMethod || undefined,
+      isNotice: form.isNotice,
+      tags: form.tags,
+      participantIds: form.participantIds,
+    };
 
+    try {
       let agendaId: string;
+
       if (isEdit) {
-        await api.put<ApiResponse<Agenda>>(`/agendas/${id}`, payload);
+        await updateAgenda.mutateAsync(payload);
         agendaId = id!;
       } else {
-        const { data } = await api.post<ApiResponse<Agenda>>('/agendas', payload);
-        agendaId = data.data.id;
+        const created = await createAgenda.mutateAsync(payload);
+        agendaId = created.id;
       }
 
+      // 첨부파일 업로드
       const pendingFiles = uploadFiles.filter((f) => f.status === 'pending');
       let uploadFailed = false;
       for (const uf of pendingFiles) {
@@ -249,11 +263,8 @@ export default function AgendaFormPage() {
         toast.success(isEdit ? '수정되었습니다.' : '일정이 생성되었습니다.');
       }
       navigate(`/agendas/${agendaId}`);
-    } catch (err) {
-      console.error('저장 실패:', err);
+    } catch {
       toast.error(isEdit ? '수정에 실패했습니다.' : '생성에 실패했습니다.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -262,7 +273,7 @@ export default function AgendaFormPage() {
       <PageHeader title={isEdit ? `${CATEGORY_LABELS[form.category]} 수정` : '새 일정'} />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Category Toggle */}
+        {/* 카테고리 토글 */}
         {!isEdit && (
           <div className="flex gap-2">
             {(Object.entries(CATEGORY_LABELS) as [AgendaCategory, string][]).map(([key, label]) => (
@@ -301,13 +312,11 @@ export default function AgendaFormPage() {
               </FormField>
             </div>
 
-            {/* ── AGENDA 날짜 ── */}
             {form.category === 'AGENDA' && (
               <>
                 <FormField label="시작 날짜" required>
                   <DatePicker value={form.agendaStartDate} onChange={(v) => set('agendaStartDate', v)} />
                 </FormField>
-
                 <FormField label="마감기한">
                   <DatePicker value={form.agendaDeadlineDate} onChange={(v) => set('agendaDeadlineDate', v)} />
                   <div className="grid grid-cols-2 gap-2 mt-2">
@@ -330,41 +339,30 @@ export default function AgendaFormPage() {
               </>
             )}
 
-            {/* ── SCHEDULE 날짜+시간 ── */}
             {form.category === 'SCHEDULE' && (
               <>
                 <FormField label="시작" required>
                   <DatePicker value={form.schedStartDate} onChange={(v) => set('schedStartDate', v)} />
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <Select value={form.schedStartHour} onChange={(e) => set('schedStartHour', e.target.value)}>
-                      {HOURS.map((h) => (
-                        <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>
-                      ))}
+                      {HOURS.map((h) => <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>)}
                     </Select>
                     <Select value={form.schedStartMinute} onChange={(e) => set('schedStartMinute', e.target.value)}>
-                      {MINUTES.map((m) => (
-                        <option key={m} value={m}>{m}분</option>
-                      ))}
+                      {MINUTES.map((m) => <option key={m} value={m}>{m}분</option>)}
                     </Select>
                   </div>
                 </FormField>
-
                 <FormField label="종료" required>
                   <DatePicker value={form.schedEndDate} onChange={(v) => set('schedEndDate', v)} />
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <Select value={form.schedEndHour} onChange={(e) => set('schedEndHour', e.target.value)}>
-                      {HOURS.map((h) => (
-                        <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>
-                      ))}
+                      {HOURS.map((h) => <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>)}
                     </Select>
                     <Select value={form.schedEndMinute} onChange={(e) => set('schedEndMinute', e.target.value)}>
-                      {MINUTES.map((m) => (
-                        <option key={m} value={m}>{m}분</option>
-                      ))}
+                      {MINUTES.map((m) => <option key={m} value={m}>{m}분</option>)}
                     </Select>
                   </div>
                 </FormField>
-
                 <FormField label="반복">
                   <Select value={form.recurrence.type} onChange={(e) => set('recurrence', { ...form.recurrence, type: e.target.value as RecurrenceConfig['type'] })}>
                     {Object.entries(RECURRENCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -373,7 +371,6 @@ export default function AgendaFormPage() {
               </>
             )}
 
-            {/* ── 보고방식 / 장소 ── */}
             {form.category === 'AGENDA' ? (
               <FormField label="보고방식">
                 <div className="flex flex-wrap gap-2">
