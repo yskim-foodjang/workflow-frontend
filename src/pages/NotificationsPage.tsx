@@ -1,4 +1,5 @@
 import { useNotifications } from '@/hooks/useNotifications';
+import { usePushNotification } from '@/hooks/usePushNotification';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -13,8 +14,16 @@ const NOTIFICATION_ICONS: Record<string, string> = {
   MENTION: 'M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207',
 };
 
+const PUSH_STATUS_TEXT: Record<string, string> = {
+  unsupported: '이 브라우저는 알림을 지원하지 않아요',
+  denied: '브라우저에서 알림이 차단되어 있어요',
+  subscribed: '핸드폰 알림 켜짐',
+  unsubscribed: '핸드폰 알림 받기',
+};
+
 export default function NotificationsPage() {
   const { notifications, unreadCount, isLoading, hasMore, loadMore, markAsRead, markAllAsRead } = useNotifications();
+  const { status: pushStatus, isLoading: pushLoading, subscribe, unsubscribe } = usePushNotification();
   const navigate = useNavigate();
 
   const handleClick = (notification: typeof notifications[0]) => {
@@ -28,11 +37,37 @@ export default function NotificationsPage() {
         title="알림"
         badge={unreadCount > 0 ? <Badge variant="danger">{unreadCount}개 읽지 않음</Badge> : undefined}
         actions={
-          unreadCount > 0 ? (
-            <button onClick={markAllAsRead} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
-              모두 읽음
-            </button>
-          ) : undefined
+          <div className="flex items-center gap-3">
+            {/* 핸드폰 알림 토글 */}
+            {pushStatus !== 'unsupported' && (
+              <button
+                onClick={pushStatus === 'subscribed' ? unsubscribe : subscribe}
+                disabled={pushLoading || pushStatus === 'denied'}
+                className={clsx(
+                  'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors',
+                  pushStatus === 'subscribed'
+                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                    : pushStatus === 'denied'
+                    ? 'text-slate-400 cursor-not-allowed'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                )}
+                title={pushStatus === 'denied' ? '브라우저 설정에서 알림 권한을 허용해주세요' : undefined}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {pushStatus === 'subscribed'
+                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  }
+                </svg>
+                {pushLoading ? '처리 중...' : PUSH_STATUS_TEXT[pushStatus]}
+              </button>
+            )}
+            {unreadCount > 0 && (
+              <button onClick={markAllAsRead} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                모두 읽음
+              </button>
+            )}
+          </div>
         }
       />
 
