@@ -87,6 +87,23 @@ export interface Comment {
   user: User;
 }
 
+export type ExtensionRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface DeadlineExtensionRequest {
+  id: string;
+  newDeadline: string;
+  reason: string | null;
+  status: ExtensionRequestStatus;
+  reviewComment: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  agendaId: string;
+  requestedById: string;
+  requestedBy: Pick<User, 'id' | 'name' | 'profileImage' | 'position'>;
+  reviewedById: string | null;
+  reviewedBy: Pick<User, 'id' | 'name'> | null;
+}
+
 export interface Notification {
   id: string;
   type: string;
