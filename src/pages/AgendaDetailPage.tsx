@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, PRIORITY_LABELS, PRIORITY_COLORS } from '@/utils/constants';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
-import { Button, Badge, Card, EmptyState, SkeletonList } from '@/components/ui';
+import { Button, Badge, CalendarPicker, Card, EmptyState, SkeletonList } from '@/components/ui';
 import { AgendaDetailView, ParticipantList, CommentSection } from '@/components/agenda';
 import api from '@/utils/api';
 import type { ApiResponse, DeadlineExtensionRequest } from '@/types';
@@ -390,12 +390,7 @@ export default function AgendaDetailPage() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   새 마감기한 <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  value={newDeadline}
-                  onChange={(e) => setNewDeadline(e.target.value)}
-                />
+                <CalendarPicker value={newDeadline} onChange={setNewDeadline} placeholder="날짜 선택" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">

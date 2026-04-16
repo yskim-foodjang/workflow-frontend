@@ -8,6 +8,7 @@ export { default as FileUpload } from './FileUpload';
 export type { UploadedFile } from './FileUpload';
 export { FormField, Input, Select, Textarea } from './FormField';
 export { default as Modal } from './Modal';
+export { default as CalendarPicker } from './CalendarPicker';
 export { default as PageHeader } from './PageHeader';
 export {
   default as Skeleton,
