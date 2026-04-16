@@ -10,8 +10,6 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-72.png',
     data: { url: payload.url || '/' },
     vibrate: [100, 50, 100],
   };
