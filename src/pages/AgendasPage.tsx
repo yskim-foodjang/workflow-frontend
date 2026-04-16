@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAgendas } from '@/hooks/useAgendas';
 import { AGENDA_TYPE_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from '@/utils/constants';
 import clsx from 'clsx';
@@ -8,6 +8,7 @@ import { Input, Select } from '@/components/ui/FormField';
 import { AgendaCard } from '@/components/agenda';
 
 export default function AgendasPage() {
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -15,11 +16,15 @@ export default function AgendasPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // 대시보드 "미완료 일정" 카드 클릭 시 ?completed=false 로 진입
+  const completedParam = searchParams.get('completed') ?? undefined;
+
   const { agendas, isLoading, hasMore, loadMore } = useAgendas({
     search: debouncedSearch,
     category: categoryFilter || undefined,
     type: typeFilter || undefined,
     priority: priorityFilter || undefined,
+    completed: completedParam,
   });
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {

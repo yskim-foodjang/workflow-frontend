@@ -16,6 +16,7 @@ export interface AgendaListFilters {
 export const queryKeys = {
   agendas: {
     all: ['agendas'] as const,
+    dashboard: () => [...queryKeys.agendas.all, 'dashboard'] as const,
     lists: () => [...queryKeys.agendas.all, 'list'] as const,
     list: (filters: AgendaListFilters) =>
       [...queryKeys.agendas.lists(), filters] as const,

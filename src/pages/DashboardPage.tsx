@@ -7,12 +7,13 @@ import { format, isToday, isThisWeek } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Card, Badge, PageHeader, Skeleton, StatCardSkeleton } from '@/components/ui';
 import api from '@/utils/api';
+import { queryKeys } from '@/lib/queryKeys';
 import type { Agenda, ApiResponse } from '@/types';
 
 // ─── 대시보드 전용 쿼리 (limit=50으로 최소화) ──────────────────────────────────
 function useDashboardAgendas() {
   return useQuery({
-    queryKey: ['agendas', 'dashboard'],
+    queryKey: queryKeys.agendas.dashboard(),
     queryFn: async () => {
       const { data } = await api.get<ApiResponse<{ items: Agenda[] }>>('/agendas?limit=50');
       return data.data.items;
@@ -22,14 +23,15 @@ function useDashboardAgendas() {
 }
 
 // ─── 통계 카드 ────────────────────────────────────────────────────────────────
-function StatCard({ title, value, isLoading, color = '' }: {
+function StatCard({ title, value, isLoading, color = '', to }: {
   title: string;
   value: number | string;
   isLoading: boolean;
   color?: string;
+  to?: string;
 }) {
-  return (
-    <Card>
+  const inner = (
+    <Card className={to ? 'hover:shadow-md transition-shadow cursor-pointer' : ''}>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{title}</p>
       {isLoading ? (
         <Skeleton className="h-8 w-16" variant="rectangular" />
@@ -38,6 +40,8 @@ function StatCard({ title, value, isLoading, color = '' }: {
       )}
     </Card>
   );
+  if (to) return <Link to={to}>{inner}</Link>;
+  return inner;
 }
 
 // ─── 대시보드 ────────────────────────────────────────────────────────────────
@@ -69,24 +73,27 @@ export default function DashboardPage() {
           </>
         ) : (
           <>
-            <StatCard title="오늘의 일정" value={todayAgendas.length} isLoading={false} />
+            <StatCard title="오늘의 일정" value={todayAgendas.length} isLoading={false} to="/agendas" />
             <StatCard
               title="이번 주 마감"
               value={weekDeadlines.length}
               isLoading={false}
               color={weekDeadlines.length > 0 ? 'text-amber-600 dark:text-amber-400' : ''}
+              to="/agendas"
             />
             <StatCard
               title="미완료 일정"
               value={incomplete.length}
               isLoading={false}
               color={incomplete.length > 5 ? 'text-rose-600 dark:text-rose-400' : ''}
+              to="/agendas?completed=false"
             />
             <StatCard
               title="읽지 않은 알림"
               value={unreadCount}
               isLoading={notiLoading}
               color={unreadCount > 0 ? 'text-primary-600 dark:text-primary-400' : ''}
+              to="/notifications"
             />
           </>
         )}

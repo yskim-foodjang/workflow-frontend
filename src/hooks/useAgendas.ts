@@ -104,7 +104,8 @@ export function useCreateAgenda() {
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.lists() });
+      // agendas.all 전체 무효화 → 목록 + 대시보드 모두 갱신
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.all });
     },
   });
 }
@@ -122,7 +123,8 @@ export function useUpdateAgenda(id: string) {
     onSuccess: (updated) => {
       // 상세 캐시 즉시 업데이트 (재요청 불필요)
       queryClient.setQueryData<Agenda>(queryKeys.agendas.detail(id), updated);
-      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.lists() });
+      // 목록 + 대시보드 모두 갱신
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.all });
     },
   });
 }
@@ -167,7 +169,7 @@ export function useDeleteAgenda() {
       toast.error('삭제에 실패했습니다.');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.all });
     },
   });
 }
