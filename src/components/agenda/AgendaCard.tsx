@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, PRIORITY_LABELS, PRIORITY_COLORS, CATEGORY_LABELS, CATEGORY_BG } from '@/utils/constants';
+import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, CATEGORY_LABELS, CATEGORY_BG } from '@/utils/constants';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
@@ -50,8 +50,9 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
               {agenda.title}
             </h3>
             <Badge className={CATEGORY_BG[agenda.category]}>{CATEGORY_LABELS[agenda.category]}</Badge>
-            <Badge className={AGENDA_TYPE_BG[agenda.type]}>{AGENDA_TYPE_LABELS[agenda.type]}</Badge>
-            <Badge className={PRIORITY_COLORS[agenda.priority]}>{PRIORITY_LABELS[agenda.priority]}</Badge>
+            {agenda.category === 'SCHEDULE' && (
+              <Badge className={AGENDA_TYPE_BG[agenda.type]}>{AGENDA_TYPE_LABELS[agenda.type]}</Badge>
+            )}
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
             <span>{format(new Date(agenda.startAt), 'M/d (EEE) HH:mm', { locale: ko })}</span>
