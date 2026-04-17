@@ -9,7 +9,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import type { EventInput, DateSelectArg, EventClickArg, DatesSetArg, EventContentArg } from '@fullcalendar/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
-import { AGENDA_TYPE_COLORS, AGENDA_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS } from '@/utils/constants';
+import { AGENDA_TYPE_COLORS, AGENDA_TYPE_LABELS } from '@/utils/constants';
 import { BRAND_COLOR, BRAND_PALETTE } from '@/config/app';
 import { Card } from '@/components/ui';
 import { queryKeys } from '@/lib/queryKeys';
@@ -122,11 +122,6 @@ function DetailPanel({ agenda, onClose, onNavigate }: { agenda: Agenda; onClose:
             >
               {isSchedule ? '일정' : AGENDA_TYPE_LABELS[agenda.type] ?? '기타'}
             </span>
-            {!isSchedule && (
-              <span className={`text-xs font-medium px-2 py-1 rounded-full ${PRIORITY_COLORS[agenda.priority]}`}>
-                {PRIORITY_LABELS[agenda.priority]}
-              </span>
-            )}
           </div>
           <button
             onClick={onClose}

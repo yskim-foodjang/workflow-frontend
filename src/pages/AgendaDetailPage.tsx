@@ -5,7 +5,7 @@ import { useAgenda, useToggleComplete, useDeleteAgenda } from '@/hooks/useAgenda
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/contexts/AuthContext';
-import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, PRIORITY_LABELS, PRIORITY_COLORS } from '@/utils/constants';
+import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG } from '@/utils/constants';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import { Button, Badge, CalendarPicker, Card, EmptyState, SkeletonList } from '@/components/ui';
@@ -160,8 +160,9 @@ export default function AgendaDetailPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <Badge className={AGENDA_TYPE_BG[agenda.type]}>{AGENDA_TYPE_LABELS[agenda.type]}</Badge>
-            <Badge className={PRIORITY_COLORS[agenda.priority]}>{PRIORITY_LABELS[agenda.priority]}</Badge>
+            {agenda.category === 'SCHEDULE' && (
+              <Badge className={AGENDA_TYPE_BG[agenda.type]}>{AGENDA_TYPE_LABELS[agenda.type]}</Badge>
+            )}
             {agenda.isCompleted && <Badge variant="success">완료</Badge>}
             {agenda.isNotice && <Badge variant="warning">공지</Badge>}
           </div>

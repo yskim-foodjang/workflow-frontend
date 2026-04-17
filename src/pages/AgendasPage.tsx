@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAgendas } from '@/hooks/useAgendas';
-import { AGENDA_TYPE_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from '@/utils/constants';
+import { AGENDA_TYPE_LABELS, CATEGORY_LABELS } from '@/utils/constants';
 import clsx from 'clsx';
 import { Button, Card, PageHeader, EmptyState, SkeletonList } from '@/components/ui';
 import { Input, Select } from '@/components/ui/FormField';
@@ -12,7 +12,7 @@ export default function AgendasPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
+
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -23,7 +23,7 @@ export default function AgendasPage() {
     search: debouncedSearch,
     category: categoryFilter || undefined,
     type: typeFilter || undefined,
-    priority: priorityFilter || undefined,
+
     completed: completedParam,
   });
 
@@ -72,12 +72,8 @@ export default function AgendasPage() {
               <option value="">모든 유형</option>
               {Object.entries(AGENDA_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </Select>
-            <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="w-auto">
-              <option value="">모든 우선순위</option>
-              {Object.entries(PRIORITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </Select>
-            {(categoryFilter || typeFilter || priorityFilter) && (
-              <button onClick={() => { setCategoryFilter(''); setTypeFilter(''); setPriorityFilter(''); }} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
+            {(categoryFilter || typeFilter) && (
+              <button onClick={() => { setCategoryFilter(''); setTypeFilter(''); }} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
                 필터 초기화
               </button>
             )}

@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
-import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, PRIORITY_LABELS, PRIORITY_COLORS } from '@/utils/constants';
-import { format, isToday, isThisWeek } from 'date-fns';
+import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, CATEGORY_LABELS, CATEGORY_BG } from '@/utils/constants';
+import { format, isToday, isThisWeek, isSameDay, differenceInDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Card, Badge, PageHeader, Skeleton, StatCardSkeleton } from '@/components/ui';
 import api from '@/utils/api';
@@ -126,31 +126,55 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-1">
-              {todayAgendas.slice(0, 5).map((agenda) => (
-                <Link
-                  key={agenda.id}
-                  to={`/agendas/${agenda.id}`}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                        {agenda.title}
-                      </span>
-                      <Badge className={AGENDA_TYPE_BG[agenda.type]}>
-                        {AGENDA_TYPE_LABELS[agenda.type]}
-                      </Badge>
+              {todayAgendas.slice(0, 5).map((agenda) => {
+                const isSchedule = agenda.category === 'SCHEDULE';
+                const startDate = new Date(agenda.startAt);
+                const endDate = agenda.endAt ? new Date(agenda.endAt) : null;
+                const deadlineDate = agenda.deadline ? new Date(agenda.deadline) : null;
+
+                let timeInfo = '';
+                if (isSchedule) {
+                  timeInfo = format(startDate, 'HH:mm', { locale: ko });
+                  if (endDate) {
+                    timeInfo += isSameDay(startDate, endDate)
+                      ? ` ~ ${format(endDate, 'HH:mm', { locale: ko })}`
+                      : ` ~ ${format(endDate, 'M/d HH:mm', { locale: ko })}`;
+                  }
+                } else if (deadlineDate) {
+                  const days = differenceInDays(deadlineDate, new Date());
+                  const ampm = deadlineDate.getHours() < 12 ? '오전' : '오후';
+                  timeInfo = days === 0 ? `오늘 마감 (${ampm})` : days < 0 ? `${Math.abs(days)}일 초과 (${ampm})` : `${days}일 후 마감 (${ampm})`;
+                }
+
+                return (
+                  <Link
+                    key={agenda.id}
+                    to={`/agendas/${agenda.id}`}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                          {agenda.title}
+                        </span>
+                        <Badge className={CATEGORY_BG[agenda.category]}>
+                          {CATEGORY_LABELS[agenda.category]}
+                        </Badge>
+                        {isSchedule && (
+                          <Badge className={AGENDA_TYPE_BG[agenda.type]}>
+                            {AGENDA_TYPE_LABELS[agenda.type]}
+                          </Badge>
+                        )}
+                      </div>
+                      {timeInfo && (
+                        <p className={`text-xs mt-0.5 ${!isSchedule && deadlineDate && differenceInDays(deadlineDate, new Date()) <= 0 ? 'text-rose-500 dark:text-rose-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {timeInfo}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {format(new Date(agenda.startAt), 'HH:mm', { locale: ko })}
-                      {agenda.endAt ? ` ~ ${format(new Date(agenda.endAt), 'HH:mm', { locale: ko })}` : ''}
-                    </p>
-                  </div>
-                  <Badge className={PRIORITY_COLORS[agenda.priority]}>
-                    {PRIORITY_LABELS[agenda.priority]}
-                  </Badge>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
               {todayAgendas.length > 5 && (
                 <Link
                   to="/agendas"
