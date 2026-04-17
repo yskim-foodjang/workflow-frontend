@@ -55,13 +55,21 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-            <span>{format(new Date(agenda.startAt), 'M/d (EEE) HH:mm', { locale: ko })}</span>
+            {agenda.category === 'SCHEDULE' ? (
+              <span>{format(new Date(agenda.startAt), 'M/d (EEE) HH:mm', { locale: ko })}</span>
+            ) : (
+              <span>{format(new Date(agenda.startAt), 'M/d (EEE)', { locale: ko })}</span>
+            )}
             {agenda.deadline && (
               <span className={clsx('font-medium', {
                 'text-rose-500':  deadlineMs !== null && deadlineMs < 24 * 60 * 60 * 1000,
                 'text-amber-500': deadlineMs !== null && deadlineMs >= 24 * 60 * 60 * 1000 && deadlineMs < 3 * 24 * 60 * 60 * 1000,
               })}>
-                마감: {format(new Date(agenda.deadline), 'M/d')}
+                {(() => {
+                  const d = new Date(agenda.deadline);
+                  const ampm = d.getHours() < 12 ? '오전' : '오후';
+                  return `마감: ${format(d, 'M/d')} (${ampm})`;
+                })()}
               </span>
             )}
             {agenda.participants.length > 0 && (
