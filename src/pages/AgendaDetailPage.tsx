@@ -84,7 +84,7 @@ export default function AgendaDetailPage() {
       setShowOrganizerModal(false);
       setOrgDeadline('');
       setOrgAmPm('AM');
-      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.all });
     },
     onError: () => {
       toast.error('마감기한 변경에 실패했습니다.');
