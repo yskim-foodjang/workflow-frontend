@@ -250,7 +250,7 @@ export default function DashboardPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`text-sm truncate ${
+                      className={`text-sm line-clamp-2 ${
                         n.isRead
                           ? 'text-slate-500 dark:text-slate-400'
                           : 'text-slate-900 dark:text-white font-medium'
@@ -258,7 +258,7 @@ export default function DashboardPage() {
                     >
                       {n.message}
                     </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                       {format(new Date(n.createdAt), 'M/d HH:mm', { locale: ko })}
                     </p>
                   </div>
