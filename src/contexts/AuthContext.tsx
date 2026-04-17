@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import api from '@/utils/api';
-import { getAccessToken, setTokens, clearTokens } from '@/utils/tokenStorage';
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/utils/tokenStorage';
 import type { User, LoginResponse, ApiResponse } from '@/types';
 
 interface AuthContextType {
@@ -25,8 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await api.get<ApiResponse<User>>('/users/me');
       setUser(data.data);
-    } catch {
-      clearTokens();
+    } catch (err: any) {
+      // 401만 토큰 삭제 — 네트워크 에러/서버 점검 등에는 토큰 유지
+      if (err.response?.status === 401) {
+        clearTokens();
+      }
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -46,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const refreshToken = getAccessToken();
+      const refreshToken = getRefreshToken(); // accessToken이 아닌 refreshToken 전달
       await api.post('/auth/logout', { refreshToken });
     } finally {
       clearTokens();

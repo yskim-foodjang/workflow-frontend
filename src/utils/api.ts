@@ -2,8 +2,10 @@ import axios from 'axios';
 import type { ApiResponse, AuthTokens } from '@/types';
 import { getAccessToken, getRefreshToken, setTokens, clearTokens, isTokenPersisted } from './tokenStorage';
 
+const BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api',
+  baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -60,12 +62,13 @@ api.interceptors.response.use(
       }
 
       try {
-        const { data } = await axios.post<ApiResponse<AuthTokens>>('/api/auth/refresh', {
-          refreshToken,
-        });
+        // 인터셉터 없는 별도 인스턴스로 refresh — 무한루프 방지 및 올바른 Railway URL 사용
+        const { data } = await axios.post<ApiResponse<AuthTokens>>(
+          `${BASE_URL}/auth/refresh`,
+          { refreshToken }
+        );
 
         const { accessToken, refreshToken: newRefresh } = data.data;
-        // 원래 저장 위치(localStorage or sessionStorage)에 그대로 갱신
         setTokens(accessToken, newRefresh, isTokenPersisted());
 
         processQueue(null, accessToken);
