@@ -50,7 +50,15 @@ export default function DashboardPage() {
   const { data: agendas = [], isLoading: agendasLoading } = useDashboardAgendas();
   const { notifications, unreadCount, isLoading: notiLoading } = useNotifications();
 
-  const todayAgendas = agendas.filter((a) => isToday(new Date(a.startAt)));
+  const todayAgendas = agendas.filter((a) => {
+    if (a.isCompleted) return false;
+    const now = new Date();
+    const start = new Date(a.startAt);
+    if (a.category === 'SCHEDULE') return isToday(start);
+    // AGENDA: 오늘이 시작일~마감일 사이
+    const deadline = a.deadline ? new Date(a.deadline) : null;
+    return start <= now && (deadline === null || deadline >= new Date(now.toDateString()));
+  });
   const weekDeadlines = agendas.filter(
     (a) => a.deadline && isThisWeek(new Date(a.deadline), { weekStartsOn: 1 })
   );

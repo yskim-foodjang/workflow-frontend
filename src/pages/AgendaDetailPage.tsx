@@ -143,6 +143,10 @@ export default function AgendaDetailPage() {
   const myParticipant = agenda.participants.find((p) => p.user.id === currentUser?.id);
   const isOrganizer = myParticipant?.role === 'ORGANIZER';
   const isParticipant = Boolean(myParticipant);
+
+  const canToggleComplete = agenda.category === 'SCHEDULE'
+    ? (isParticipant || canEdit)
+    : (isOrganizer || isAdmin);
   const canReviewExtension = isOrganizer || isAdmin;
   const canRequestExtension = isParticipant && !isOrganizer && !isAdmin && agenda.category === 'AGENDA' && Boolean(agenda.deadline);
   const canChangeDeadline = (isOrganizer || isAdmin) && agenda.category === 'AGENDA';
@@ -199,8 +203,8 @@ export default function AgendaDetailPage() {
             {agenda.title}
           </h1>
         </div>
-        {canEdit && (
-          <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0">
+          {canToggleComplete && (
             <Button
               variant="secondary"
               size="sm"
@@ -209,20 +213,24 @@ export default function AgendaDetailPage() {
             >
               {agenda.isCompleted ? '미완료' : '완료'}
             </Button>
-            <Link to={`/agendas/${id}/edit`}>
-              <Button variant="secondary" size="sm">수정</Button>
-            </Link>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleDelete}
-              isLoading={deleteAgenda.isPending}
-              className="text-rose-600 hover:text-rose-700"
-            >
-              삭제
-            </Button>
-          </div>
-        )}
+          )}
+          {canEdit && (
+            <>
+              <Link to={`/agendas/${id}/edit`}>
+                <Button variant="secondary" size="sm">수정</Button>
+              </Link>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleDelete}
+                isLoading={deleteAgenda.isPending}
+                className="text-rose-600 hover:text-rose-700"
+              >
+                삭제
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <AgendaDetailView agenda={agenda} deadlineDaysLeft={deadlineDaysLeft} />
