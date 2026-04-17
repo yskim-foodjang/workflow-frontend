@@ -126,7 +126,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-1">
-              {todayAgendas.slice(0, 5).map((agenda) => {
+              {todayAgendas.slice(0, 7).map((agenda) => {
                 const isSchedule = agenda.category === 'SCHEDULE';
                 const startDate = new Date(agenda.startAt);
                 const endDate = agenda.endAt ? new Date(agenda.endAt) : null;
@@ -145,6 +145,9 @@ export default function DashboardPage() {
                   const ampm = deadlineDate.getHours() < 12 ? '오전' : '오후';
                   timeInfo = days === 0 ? `오늘 마감 (${ampm})` : days < 0 ? `${Math.abs(days)}일 초과 (${ampm})` : `${days}일 후 마감 (${ampm})`;
                 }
+
+                const participantCount = agenda.participants.length;
+                const extra = isSchedule ? agenda.location : agenda.reportMethod;
 
                 return (
                   <Link
@@ -166,21 +169,36 @@ export default function DashboardPage() {
                           </Badge>
                         )}
                       </div>
-                      {timeInfo && (
-                        <p className={`text-xs mt-0.5 ${!isSchedule && deadlineDate && differenceInDays(deadlineDate, new Date()) <= 0 ? 'text-rose-500 dark:text-rose-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {timeInfo}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                        {timeInfo && (
+                          <span className={`text-xs ${!isSchedule && deadlineDate && differenceInDays(deadlineDate, new Date()) <= 0 ? 'text-rose-500 dark:text-rose-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                            {timeInfo}
+                          </span>
+                        )}
+                        {extra && (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                            {isSchedule ? '📍' : '📋'} {extra}
+                          </span>
+                        )}
+                        {participantCount > 0 && (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-0.5">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {participantCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 );
               })}
-              {todayAgendas.length > 5 && (
+              {todayAgendas.length > 7 && (
                 <Link
                   to="/agendas"
                   className="block text-center text-xs text-primary-600 dark:text-primary-400 pt-2"
                 >
-                  +{todayAgendas.length - 5}개 더보기
+                  +{todayAgendas.length - 7}개 더보기
                 </Link>
               )}
             </div>
