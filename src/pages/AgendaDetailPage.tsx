@@ -36,6 +36,7 @@ export default function AgendaDetailPage() {
   // ── 연장 신청 상태 ────────────────────────────────────────────────────────────
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [newDeadline, setNewDeadline] = useState('');
+  const [deadlineAmPm, setDeadlineAmPm] = useState<'AM' | 'PM'>('AM');
   const [reason, setReason] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export default function AgendaDetailPage() {
       toast.success('마감기한 연장 신청이 완료되었습니다.');
       setShowRequestModal(false);
       setNewDeadline('');
+      setDeadlineAmPm('AM');
       setReason('');
       refetchExtensions();
     },
@@ -391,6 +393,22 @@ export default function AgendaDetailPage() {
                   새 마감기한 <span className="text-rose-500">*</span>
                 </label>
                 <CalendarPicker value={newDeadline} onChange={setNewDeadline} placeholder="날짜 선택" />
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {(['AM', 'PM'] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setDeadlineAmPm(v)}
+                      className={`py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        deadlineAmPm === v
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {v === 'AM' ? '오전' : '오후'}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -410,7 +428,7 @@ export default function AgendaDetailPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => { setShowRequestModal(false); setNewDeadline(''); setReason(''); }}
+                onClick={() => { setShowRequestModal(false); setNewDeadline(''); setDeadlineAmPm('AM'); setReason(''); }}
               >
                 취소
               </Button>
@@ -418,7 +436,9 @@ export default function AgendaDetailPage() {
                 size="sm"
                 onClick={() => {
                   if (!newDeadline) { toast.error('새 마감기한을 선택하세요.'); return; }
-                  createExtensionRequest.mutate({ newDeadline: new Date(newDeadline).toISOString(), reason: reason || undefined });
+                  const h = deadlineAmPm === 'AM' ? 12 : 18;
+                  const isoDeadline = new Date(`${newDeadline}T${String(h).padStart(2, '0')}:00:00`).toISOString();
+                  createExtensionRequest.mutate({ newDeadline: isoDeadline, reason: reason || undefined });
                 }}
                 isLoading={createExtensionRequest.isPending}
               >
