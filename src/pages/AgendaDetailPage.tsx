@@ -40,6 +40,10 @@ export default function AgendaDetailPage() {
   const [reason, setReason] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  // ── 주관자 직접 변경 상태 ────────────────────────────────────────────────────
+  const [showOrganizerModal, setShowOrganizerModal] = useState(false);
+  const [orgDeadline, setOrgDeadline] = useState('');
+  const [orgAmPm, setOrgAmPm] = useState<'AM' | 'PM'>('AM');
 
   const extensionQueryKey = ['agendas', id, 'extension-requests'] as const;
 
@@ -67,6 +71,23 @@ export default function AgendaDetailPage() {
     },
     onError: () => {
       toast.error('연장 신청에 실패했습니다.');
+    },
+  });
+
+  const updateDeadlineByOrganizer = useMutation({
+    mutationFn: async (deadline: string) => {
+      const { data } = await api.put<ApiResponse<unknown>>(`/agendas/${id}`, { deadline });
+      return data.data;
+    },
+    onSuccess: () => {
+      toast.success('마감기한이 변경되었습니다.');
+      setShowOrganizerModal(false);
+      setOrgDeadline('');
+      setOrgAmPm('AM');
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.detail(id!) });
+    },
+    onError: () => {
+      toast.error('마감기한 변경에 실패했습니다.');
     },
   });
 
@@ -124,6 +145,7 @@ export default function AgendaDetailPage() {
   const isParticipant = Boolean(myParticipant);
   const canReviewExtension = isOrganizer || isAdmin;
   const canRequestExtension = isParticipant && !isOrganizer && !isAdmin && agenda.category === 'AGENDA' && Boolean(agenda.deadline);
+  const canChangeDeadline = (isOrganizer || isAdmin) && agenda.category === 'AGENDA';
   const showExtensionSection = agenda.category === 'AGENDA' && Boolean(agenda.deadline);
   const pendingExtensions = extensionRequests.filter((r) => r.status === 'PENDING');
 
@@ -265,15 +287,26 @@ export default function AgendaDetailPage() {
             <h3 className="text-sm font-medium text-slate-900 dark:text-white">
               마감기한 연장 신청
             </h3>
-            {canRequestExtension && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowRequestModal(true)}
-              >
-                연장 신청
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {canChangeDeadline && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowOrganizerModal(true)}
+                >
+                  마감기한 변경
+                </Button>
+              )}
+              {canRequestExtension && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowRequestModal(true)}
+                >
+                  연장 신청
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* 주관자/어드민: PENDING 신청 목록 */}
@@ -444,6 +477,56 @@ export default function AgendaDetailPage() {
                 isLoading={createExtensionRequest.isPending}
               >
                 신청
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 주관자 마감기한 직접 변경 모달 */}
+      {showOrganizerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">마감기한 변경</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  새 마감기한 <span className="text-rose-500">*</span>
+                </label>
+                <CalendarPicker value={orgDeadline} onChange={setOrgDeadline} placeholder="날짜 선택" />
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {(['AM', 'PM'] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setOrgAmPm(v)}
+                      className={`py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        orgAmPm === v
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {v === 'AM' ? '오전' : '오후'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="secondary" size="sm" onClick={() => { setShowOrganizerModal(false); setOrgDeadline(''); setOrgAmPm('AM'); }}>
+                취소
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (!orgDeadline) { toast.error('새 마감기한을 선택하세요.'); return; }
+                  const h = orgAmPm === 'AM' ? 12 : 18;
+                  const iso = new Date(`${orgDeadline}T${String(h).padStart(2, '0')}:00:00`).toISOString();
+                  updateDeadlineByOrganizer.mutate(iso);
+                }}
+                isLoading={updateDeadlineByOrganizer.isPending}
+              >
+                변경
               </Button>
             </div>
           </div>
