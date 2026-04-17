@@ -4,7 +4,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export const CATEGORY_BG: Record<string, string> = {
-  AGENDA: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  AGENDA: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
   SCHEDULE: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
 };
 
