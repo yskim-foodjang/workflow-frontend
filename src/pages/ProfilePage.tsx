@@ -17,7 +17,7 @@ interface ProfileRequest {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
   const [showPwForm, setShowPwForm] = useState(false);
   const [form, setForm] = useState({ current: '', next: '', confirm: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,11 +30,13 @@ export default function ProfilePage() {
   const [requestLoading, setRequestLoading] = useState(true);
 
   useEffect(() => {
+    // 최신 프로필·역할 반영 (토큰 재발급 포함)
+    refreshSession();
     api.get('/users/me/profile-request')
       .then(({ data }) => setPendingRequest(data.data))
       .catch(() => {})
       .finally(() => setRequestLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '');
@@ -132,11 +134,19 @@ export default function ProfilePage() {
             <dt className="text-sm text-slate-500 dark:text-slate-400">부서</dt>
             <dd className="text-sm text-slate-900 dark:text-white">{user?.team?.name || '-'}</dd>
           </div>
+          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+            <dt className="text-sm text-slate-500 dark:text-slate-400">직책</dt>
+            <dd className="text-sm text-slate-900 dark:text-white">{user?.position || '-'}</dd>
+          </div>
+          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+            <dt className="text-sm text-slate-500 dark:text-slate-400">연락처</dt>
+            <dd className="text-sm text-slate-900 dark:text-white">{user?.phone || '-'}</dd>
+          </div>
           <div className="flex justify-between py-2">
             <dt className="text-sm text-slate-500 dark:text-slate-400">권한</dt>
             <dd>
-              <Badge variant={user?.role === 'ADMIN' ? 'warning' : 'default'}>
-                {user?.role === 'ADMIN' ? '관리자' : '멤버'}
+              <Badge variant={user?.role === 'ADMIN' ? 'warning' : user?.role === 'SUB_ADMIN' ? 'info' : 'default'}>
+                {user?.role === 'ADMIN' ? '메인관리자' : user?.role === 'SUB_ADMIN' ? '서브관리자' : '멤버'}
               </Badge>
             </dd>
           </div>

@@ -4,6 +4,7 @@ export interface User {
   name: string;
   role: 'ADMIN' | 'SUB_ADMIN' | 'MEMBER';
   position: string | null;
+  phone?: string | null;
   profileImage: string | null;
   department: Department | null;
   team: Team | null;
