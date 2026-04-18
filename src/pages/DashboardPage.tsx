@@ -64,7 +64,9 @@ export default function DashboardPage() {
     return start <= now && (deadline === null || deadline >= new Date(now.toDateString()));
   });
   const weekDeadlines = agendas.filter(
-    (a) => !a.isCompleted && a.deadline && isThisWeek(new Date(a.deadline), { weekStartsOn: 1 })
+    (a) => !a.isCompleted && a.deadline
+      && isThisWeek(new Date(a.deadline), { weekStartsOn: 1 })
+      && new Date(a.deadline) >= startOfDay(new Date())
   );
   const incomplete = agendas.filter((a) => !a.isCompleted);
   const overdue = agendas.filter(
