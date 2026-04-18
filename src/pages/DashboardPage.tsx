@@ -48,7 +48,7 @@ function StatCard({ title, value, isLoading, color = '', to }: {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: agendas = [], isLoading: agendasLoading } = useDashboardAgendas();
-  const { notifications, unreadCount, isLoading: notiLoading } = useNotifications();
+  const { notifications, isLoading: notiLoading } = useNotifications();
 
   const todayAgendas = agendas.filter((a) => {
     if (a.isCompleted) return false;
@@ -64,9 +64,12 @@ export default function DashboardPage() {
     return start <= now && (deadline === null || deadline >= new Date(now.toDateString()));
   });
   const weekDeadlines = agendas.filter(
-    (a) => a.deadline && isThisWeek(new Date(a.deadline), { weekStartsOn: 1 })
+    (a) => !a.isCompleted && a.deadline && isThisWeek(new Date(a.deadline), { weekStartsOn: 1 })
   );
   const incomplete = agendas.filter((a) => !a.isCompleted);
+  const overdue = agendas.filter(
+    (a) => !a.isCompleted && a.deadline && new Date(a.deadline) < startOfDay(new Date())
+  );
 
   const isLoading = agendasLoading;
 
@@ -101,11 +104,11 @@ export default function DashboardPage() {
               to="/agendas?completed=false"
             />
             <StatCard
-              title="읽지 않은 알림"
-              value={unreadCount}
-              isLoading={notiLoading}
-              color={unreadCount > 0 ? 'text-primary-600 dark:text-primary-400' : ''}
-              to="/notifications"
+              title="마감 초과"
+              value={overdue.length}
+              isLoading={false}
+              color={overdue.length > 0 ? 'text-rose-600 dark:text-rose-400' : ''}
+              to="/agendas"
             />
           </>
         )}
