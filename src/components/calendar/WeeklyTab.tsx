@@ -115,7 +115,7 @@ export default function WeeklyTab({ selectedDate, agendas, holidays, onDateSelec
               onClick={() => onDateSelect(new Date())}
               className="text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
             >
-              오늘 이동
+              이번 주 이동
             </button>
           )}
         </div>

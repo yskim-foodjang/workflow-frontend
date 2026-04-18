@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, isSameDay, isToday, addMonths, startOfDay, endOfDay } from 'date-fns';
+import { format, isSameDay, isToday, isThisMonth, addMonths, startOfDay, endOfDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
 import type { Agenda } from '@/types';
@@ -67,9 +67,23 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, holi
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="text-sm font-semibold text-slate-900 dark:text-white">
-            {format(displayMonth, 'yyyy년 M월', { locale: ko })}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-900 dark:text-white">
+              {format(displayMonth, 'yyyy년 M월', { locale: ko })}
+            </span>
+            {isThisMonth(displayMonth) ? (
+              <span className="text-xs px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium">
+                이번 달
+              </span>
+            ) : (
+              <button
+                onClick={() => onMonthChange(new Date())}
+                className="text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
+              >
+                이번 달 이동
+              </button>
+            )}
+          </div>
           <button
             onClick={() => onMonthChange(addMonths(displayMonth, 1))}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
