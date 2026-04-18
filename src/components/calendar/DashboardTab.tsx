@@ -15,11 +15,12 @@ interface Props {
   agendas: Agenda[];
   onDateSelect: (d: Date) => void;
   onMonthChange: (d: Date) => void;
+  onSwitchToDaily: (d: Date) => void;
 }
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
-export default function DashboardTab({ selectedDate, displayMonth, agendas, onDateSelect, onMonthChange }: Props) {
+export default function DashboardTab({ selectedDate, displayMonth, agendas, onDateSelect, onMonthChange, onSwitchToDaily }: Props) {
   const navigate = useNavigate();
   const year = displayMonth.getFullYear();
   const month = displayMonth.getMonth();
@@ -88,7 +89,7 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, onDa
             return (
               <button
                 key={idx}
-                onClick={() => onDateSelect(day)}
+                onClick={() => onSwitchToDaily(day)}
                 className={clsx(
                   'flex flex-col items-center py-1 rounded-lg transition-colors',
                   isSelected ? 'bg-slate-100 dark:bg-slate-700' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50',

@@ -12,7 +12,7 @@ import DailyTab from './DailyTab';
 type CalendarTab = 'dashboard' | 'weekly' | 'daily';
 
 const TABS: { key: CalendarTab; label: string }[] = [
-  { key: 'dashboard', label: '대시보드' },
+  { key: 'dashboard', label: '월간' },
   { key: 'weekly',    label: '주간' },
   { key: 'daily',     label: '일간' },
 ];
@@ -96,6 +96,7 @@ export default function CalendarView() {
           agendas={agendas}
           onDateSelect={handleDateSelect}
           onMonthChange={setDisplayMonth}
+          onSwitchToDaily={handleSwitchToDaily}
         />
       )}
       {activeTab === 'weekly' && (

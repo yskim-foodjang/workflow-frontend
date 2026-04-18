@@ -1,6 +1,6 @@
 export const CATEGORY_LABELS: Record<string, string> = {
   AGENDA: '아젠다',
-  SCHEDULE: '일정',
+  SCHEDULE: '스케줄',
 };
 
 export const CATEGORY_BG: Record<string, string> = {
