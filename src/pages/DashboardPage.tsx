@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, CATEGORY_LABELS, CATEGORY_BG } from '@/utils/constants';
-import { format, isToday, isThisWeek, isSameDay, differenceInDays, startOfDay, endOfDay } from 'date-fns';
+import { format, isThisWeek, isSameDay, differenceInDays, startOfDay, endOfDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Card, Badge, PageHeader, Skeleton, StatCardSkeleton } from '@/components/ui';
 import api from '@/utils/api';
