@@ -57,7 +57,6 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
   const nowH   = now.getHours();
   const nowTop = (nowH - GRID_START) * HOUR_H + (now.getMinutes() / 60) * HOUR_H;
   const isNowVisible = nowH >= GRID_START && nowH < GRID_END;
-  const todayColIdx  = weekDays.findIndex(d => isToday(d));
   const isThisWeek   = isSameWeek(selectedDate, new Date(), { weekStartsOn: 0 });
 
   // Scroll to current time on mount
