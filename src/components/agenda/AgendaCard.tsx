@@ -48,17 +48,23 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
           agenda.category === 'AGENDA' ? 'bg-violet-400' : 'bg-teal-500'
         )} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 className={clsx('font-medium truncate', agenda.isCompleted
+          {/* 제목 줄 — 제목+배지(왼쪽) + 참여자 아바타(오른쪽) */}
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={clsx('font-medium truncate flex-1 min-w-0', agenda.isCompleted
               ? 'line-through text-slate-400 dark:text-slate-500'
               : 'text-slate-900 dark:text-white'
             )}>
               {agenda.title}
             </h3>
-            <Badge className={CATEGORY_BG[agenda.category]}>{CATEGORY_LABELS[agenda.category]}</Badge>
-            {agenda.category === 'SCHEDULE' && (
-              <Badge className={AGENDA_TYPE_BG[agenda.type]}>{AGENDA_TYPE_LABELS[agenda.type]}</Badge>
-            )}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Badge className={CATEGORY_BG[agenda.category]}>{CATEGORY_LABELS[agenda.category]}</Badge>
+              {agenda.category === 'SCHEDULE' && (
+                <Badge className={AGENDA_TYPE_BG[agenda.type]}>{AGENDA_TYPE_LABELS[agenda.type]}</Badge>
+              )}
+              {agenda.participants.length > 0 && (
+                <AvatarGroup names={agenda.participants.map((p) => p.user.name)} />
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
             {agenda.category === 'SCHEDULE' ? (
@@ -85,14 +91,6 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
                 )}
               </span>
             )}
-            {agenda.participants.length > 0 && (
-              <span className="flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {agenda.participants.length}
-              </span>
-            )}
             {agenda._count && agenda._count.comments > 0 && (
               <span className="flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -103,7 +101,6 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
             )}
           </div>
         </div>
-        <AvatarGroup names={agenda.participants.map((p) => p.user.name)} />
       </Card>
     </Link>
   );
