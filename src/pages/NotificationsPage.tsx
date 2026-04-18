@@ -33,39 +33,40 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* 핸드폰 알림 토글 — 상단 독립 배치 */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={pushStatus === 'subscribed' ? unsubscribe : subscribe}
+          disabled={pushLoading || pushStatus === 'denied' || pushStatus === 'unsupported'}
+          className={clsx(
+            'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors',
+            pushStatus === 'subscribed'
+              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+              : pushStatus === 'denied' || pushStatus === 'unsupported'
+              ? 'text-slate-400 cursor-not-allowed'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+          )}
+          title={
+            pushStatus === 'denied' ? '브라우저 설정에서 알림 권한을 허용해주세요' :
+            pushStatus === 'unsupported' ? '이 브라우저/환경에서는 지원되지 않습니다 (iPhone은 홈화면 추가 후 홈화면에서 열어주세요)' : undefined
+          }
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {pushLoading ? '처리 중...' : PUSH_STATUS_TEXT[pushStatus]}
+        </button>
+      </div>
+
       <PageHeader
         title="알림"
         badge={unreadCount > 0 ? <Badge variant="danger">{unreadCount}개 읽지 않음</Badge> : undefined}
         actions={
-          <div className="flex items-center gap-3">
-            {/* 핸드폰 알림 토글 */}
-            <button
-              onClick={pushStatus === 'subscribed' ? unsubscribe : subscribe}
-              disabled={pushLoading || pushStatus === 'denied' || pushStatus === 'unsupported'}
-              className={clsx(
-                'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors',
-                pushStatus === 'subscribed'
-                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : pushStatus === 'denied' || pushStatus === 'unsupported'
-                  ? 'text-slate-400 cursor-not-allowed'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-              )}
-              title={
-                pushStatus === 'denied' ? '브라우저 설정에서 알림 권한을 허용해주세요' :
-                pushStatus === 'unsupported' ? '이 브라우저/환경에서는 지원되지 않습니다 (iPhone은 홈화면 추가 후 홈화면에서 열어주세요)' : undefined
-              }
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              {pushLoading ? '처리 중...' : PUSH_STATUS_TEXT[pushStatus]}
+          unreadCount > 0 ? (
+            <button onClick={markAllAsRead} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
+              모두 읽음
             </button>
-            {unreadCount > 0 && (
-              <button onClick={markAllAsRead} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
-                모두 읽음
-              </button>
-            )}
-          </div>
+          ) : undefined
         }
       />
 
