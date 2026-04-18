@@ -1,10 +1,13 @@
 import { useMemo, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, isSameDay, isToday, addDays, startOfDay, endOfDay } from 'date-fns';
+import { format, isSameDay, addDays, startOfDay, endOfDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
 import type { Agenda } from '@/types';
-import { getColor, formatHHMM, getWeekDays, daysLeft, getAmPm, getAgendasForDay, getScheduleStatus } from './calendarUtils';
+import {
+  getColor, formatHHMM, getWeekDays, daysLeft, getAmPm,
+  getAgendasForDay, getScheduleStatus, isMultiDaySchedule, TYPE_LABEL,
+} from './calendarUtils';
 
 interface Props {
   selectedDate: Date;
@@ -27,6 +30,8 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
     return () => clearInterval(timer);
   }, []);
 
+  const isSelectedToday = selectedDate.toDateString() === new Date().toDateString();
+
   const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate]);
 
   const activeAgendas = useMemo(() => {
@@ -40,9 +45,22 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
     });
   }, [agendas, selectedDate]);
 
-  const daySchedules = useMemo(() => (
+  // Multi-day schedules spanning today → shown as all-day bars above timeline
+  const allDaySchedules = useMemo(() => {
+    const dayStart = startOfDay(selectedDate);
+    const dayEnd   = endOfDay(selectedDate);
+    return agendas.filter(a => {
+      if (!isMultiDaySchedule(a)) return false;
+      const start = new Date(a.startAt);
+      const end   = new Date(a.endAt!);
+      return start <= dayEnd && end >= dayStart;
+    });
+  }, [agendas, selectedDate]);
+
+  // Single-day schedules only in time grid
+  const timeSchedules = useMemo(() => (
     agendas
-      .filter(a => a.category === 'SCHEDULE' && isSameDay(new Date(a.startAt), selectedDate))
+      .filter(a => a.category === 'SCHEDULE' && !isMultiDaySchedule(a) && isSameDay(new Date(a.startAt), selectedDate))
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
   ), [agendas, selectedDate]);
 
@@ -55,7 +73,7 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
 
   const nowH   = now.getHours();
   const nowTop = (nowH - GRID_START) * HOUR_H + (now.getMinutes() / 60) * HOUR_H;
-  const isNowVisible = isToday(selectedDate) && nowH >= GRID_START && nowH < GRID_END;
+  const isNowVisible = isSelectedToday && nowH >= GRID_START && nowH < GRID_END;
 
   useEffect(() => {
     if (gridRef.current && isNowVisible) {
@@ -80,7 +98,7 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
           <span className="text-sm font-semibold text-slate-900 dark:text-white">
             {format(selectedDate, 'M월 d일 EEE', { locale: ko })}
           </span>
-          {!isToday(selectedDate) && (
+          {!isSelectedToday && (
             <button
               onClick={() => onDateSelect(new Date())}
               className="text-xs px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium"
@@ -103,7 +121,7 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-2">
         <div className="grid grid-cols-7">
           {weekDays.map((day, i) => {
-            const isTodayCell = isToday(day);
+            const isTodayCell = day.toDateString() === new Date().toDateString();
             const isSelected  = isSameDay(day, selectedDate) && !isTodayCell;
             const dotColor    = weekDotColors[i];
             const dow         = day.getDay();
@@ -141,7 +159,43 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
         </div>
       </div>
 
-      {/* ── 진행중 아젠다 (horizontal bars) ──────────────────── */}
+      {/* ── 다일 스케줄 (all-day bars) ────────────────────────── */}
+      {allDaySchedules.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+            <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300">종일</h3>
+          </div>
+          <div className="p-2 space-y-1">
+            {allDaySchedules.map(a => {
+              const color = getColor(a);
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => navigate(`/agendas/${a.id}`)}
+                  className="w-full flex items-center hover:opacity-80 transition-opacity"
+                >
+                  <div
+                    className="h-6 rounded flex-1 flex items-center justify-between px-2 text-[11px] font-medium text-white overflow-hidden"
+                    style={{ backgroundColor: color }}
+                  >
+                    <span className="truncate flex-1">{a.title}</span>
+                    {TYPE_LABEL[a.type] && (
+                      <span className="ml-2 flex-shrink-0 text-white/80 text-[10px]">
+                        {TYPE_LABEL[a.type]}
+                      </span>
+                    )}
+                    <span className="ml-2 flex-shrink-0 text-white/70 text-[10px] tabular-nums">
+                      {format(new Date(a.startAt), 'M/d', { locale: ko })}–{format(new Date(a.endAt!), 'M/d', { locale: ko })}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── 진행중 아젠다 ─────────────────────────────────────── */}
       {activeAgendas.length > 0 && (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
           <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
@@ -212,8 +266,8 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
               </div>
             )}
 
-            {/* Schedule blocks */}
-            {daySchedules.map(a => {
+            {/* Schedule blocks (single-day only) */}
+            {timeSchedules.map(a => {
               const sH = new Date(a.startAt).getHours();
               const sM = new Date(a.startAt).getMinutes();
               const eH = a.endAt ? new Date(a.endAt).getHours()   : sH + 1;
@@ -254,6 +308,18 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* ── 범례 ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-4 px-1 pb-1">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-[#0D9488]" />
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">스케줄</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-[#8B5CF6]" />
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">아젠다</span>
         </div>
       </div>
     </div>

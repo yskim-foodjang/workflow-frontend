@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  format, isSameDay, isToday, addWeeks, isSameWeek,
-  startOfDay, endOfDay, getISOWeek,
+  format, isSameDay, isToday, addWeeks,
+  startOfDay, endOfDay, getISOWeek, startOfWeek,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
 import type { Agenda } from '@/types';
-import { getColor, formatHHMM, getWeekDays, getAmPm, TYPE_ACCENT, TYPE_LABEL } from './calendarUtils';
+import { getColor, formatHHMM, getWeekDays, getAmPm, TYPE_ACCENT, isMultiDaySchedule } from './calendarUtils';
 
 interface Props {
   selectedDate: Date;
@@ -16,10 +16,10 @@ interface Props {
   onSwitchToDaily: (d: Date) => void;
 }
 
-const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8..18
-const HOUR_H = 44;
+const HOURS      = Array.from({ length: 11 }, (_, i) => i + 8); // 8..18
+const HOUR_H     = 44;
 const GRID_START = 8;
-const GRID_END = 19;
+const GRID_END   = 19;
 
 export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitchToDaily }: Props) {
   const navigate = useNavigate();
@@ -34,19 +34,36 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
 
   const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate]);
 
-  const weekAgendas = useMemo(() => {
-    const weekStart = startOfDay(weekDays[0]);
-    const weekEnd   = endOfDay(weekDays[6]);
+  // 이번 주 여부 — isSameWeek 대신 주 시작일 비교로 정확히 판단
+  const isThisWeek = useMemo(() => {
+    const thisStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+    return isSameDay(weekDays[0], thisStart);
+  }, [weekDays]);
+
+  // 간트 영역: AGENDA + 다일 SCHEDULE
+  const weekGanttItems = useMemo(() => {
+    const wStart = startOfDay(weekDays[0]);
+    const wEnd   = endOfDay(weekDays[6]);
     return agendas.filter(a => {
-      if (a.category !== 'AGENDA') return false;
       const start = new Date(a.startAt);
-      const end   = a.deadline ? new Date(a.deadline) : a.endAt ? new Date(a.endAt) : new Date(a.startAt);
-      return start <= weekEnd && end >= weekStart;
+      if (a.category === 'AGENDA') {
+        const end = a.deadline ? new Date(a.deadline) : a.endAt ? new Date(a.endAt) : start;
+        return start <= wEnd && end >= wStart;
+      }
+      if (isMultiDaySchedule(a)) {
+        return start <= wEnd && new Date(a.endAt!) >= wStart;
+      }
+      return false;
     });
   }, [agendas, weekDays]);
 
+  // 시간 그리드: 단일 SCHEDULE만
   const weekSchedules = useMemo(() => (
-    agendas.filter(a => a.category === 'SCHEDULE' && weekDays.some(d => isSameDay(new Date(a.startAt), d)))
+    agendas.filter(a =>
+      a.category === 'SCHEDULE' &&
+      !isMultiDaySchedule(a) &&
+      weekDays.some(d => isSameDay(new Date(a.startAt), d))
+    )
   ), [agendas, weekDays]);
 
   const weekLabel = useMemo(() => {
@@ -54,12 +71,10 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
     return `${format(weekDays[0], 'M월', { locale: ko })} ${wn}주`;
   }, [weekDays]);
 
-  const nowH   = now.getHours();
-  const nowTop = (nowH - GRID_START) * HOUR_H + (now.getMinutes() / 60) * HOUR_H;
+  const nowH         = now.getHours();
+  const nowTop       = (nowH - GRID_START) * HOUR_H + (now.getMinutes() / 60) * HOUR_H;
   const isNowVisible = nowH >= GRID_START && nowH < GRID_END;
-  const isThisWeek   = isSameWeek(selectedDate, new Date(), { weekStartsOn: 0 });
 
-  // Scroll to current time on mount
   useEffect(() => {
     if (gridRef.current && isNowVisible) {
       gridRef.current.scrollTop = Math.max(0, nowTop - 100);
@@ -67,9 +82,17 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 간트 아이템 끝날짜 계산
+  function ganttEnd(a: Agenda): Date {
+    if (a.category === 'AGENDA') {
+      return a.deadline ? new Date(a.deadline) : a.endAt ? new Date(a.endAt) : new Date(a.startAt);
+    }
+    return a.endAt ? new Date(a.endAt) : new Date(a.startAt);
+  }
+
   return (
     <div className="space-y-3">
-      {/* ── Week navigation ──────────────────────────────────── */}
+      {/* ── Week nav ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => onDateSelect(addWeeks(selectedDate, -1))}
@@ -115,9 +138,7 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                 onClick={() => onSwitchToDaily(day)}
                 className={clsx(
                   'flex flex-col items-center py-2 transition-colors',
-                  isSelected
-                    ? 'bg-slate-50 dark:bg-slate-700/50'
-                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/30',
+                  isSelected ? 'bg-slate-50 dark:bg-slate-700/50' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30',
                 )}
               >
                 <span className={clsx(
@@ -137,14 +158,13 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
           })}
         </div>
 
-        {/* Gantt area (AGENDA bars) */}
-        {weekAgendas.length > 0 && (
+        {/* Gantt area (AGENDA + 다일 SCHEDULE) */}
+        {weekGanttItems.length > 0 && (
           <div className="border-b border-slate-100 dark:border-slate-700 px-2 py-1.5 space-y-1">
-            {weekAgendas.map(a => {
+            {weekGanttItems.map(a => {
               const color  = getColor(a);
               const aStart = new Date(a.startAt);
-              const aEnd   = a.deadline ? new Date(a.deadline) : a.endAt ? new Date(a.endAt) : new Date(a.startAt);
-
+              const aEnd   = ganttEnd(a);
               let firstCol = -1, lastCol = -1;
               weekDays.forEach((d, i) => {
                 if (aStart <= endOfDay(d) && aEnd >= startOfDay(d)) {
@@ -153,27 +173,25 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                 }
               });
               if (firstCol < 0) return null;
-
-              const continuesBefore    = aStart < startOfDay(weekDays[0]);
-              const continuesAfter     = aEnd   > endOfDay(weekDays[6]);
-              const isDeadlineThisWeek = a.deadline && weekDays.some(d => isSameDay(new Date(a.deadline!), d));
-              const span = lastCol - firstCol + 1;
-
+              const span             = lastCol - firstCol + 1;
+              const continuesBefore  = aStart < startOfDay(weekDays[0]);
+              const continuesAfter   = aEnd   > endOfDay(weekDays[6]);
+              const isDeadlineInWeek = a.category === 'AGENDA' && a.deadline && weekDays.some(d => isSameDay(new Date(a.deadline!), d));
               return (
                 <div key={a.id} className="relative h-6">
                   <button
                     onClick={() => navigate(`/agendas/${a.id}`)}
                     className="absolute h-5 top-0.5 flex items-center gap-0.5 px-1.5 text-[10px] font-medium text-white overflow-hidden"
                     style={{
-                      left:   `${firstCol * (100 / 7)}%`,
-                      width:  `${span * (100 / 7)}%`,
+                      left:  `${firstCol * (100 / 7)}%`,
+                      width: `${span * (100 / 7)}%`,
                       backgroundColor: color,
                       borderRadius: `${continuesBefore ? 0 : 3}px ${continuesAfter ? 0 : 3}px ${continuesAfter ? 0 : 3}px ${continuesBefore ? 0 : 3}px`,
                     }}
                   >
                     {continuesBefore && <span className="flex-shrink-0">←</span>}
                     <span className="truncate flex-1">{a.title}</span>
-                    {isDeadlineThisWeek && a.deadline && (
+                    {isDeadlineInWeek && a.deadline && (
                       <span className="ml-1 text-[8px] bg-white/25 px-0.5 rounded flex-shrink-0">
                         {getAmPm(a.deadline)}마감
                       </span>
@@ -189,7 +207,7 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
         {/* Time grid */}
         <div ref={gridRef} className="overflow-y-auto" style={{ maxHeight: 440 }}>
           <div className="flex" style={{ height: HOURS.length * HOUR_H }}>
-            {/* Hour labels column */}
+            {/* Hour labels */}
             <div className="w-8 flex-shrink-0 relative">
               {HOURS.map((h, i) => (
                 <div
@@ -208,7 +226,6 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
             {weekDays.map((day, colIdx) => {
               const isTodayCol   = isToday(day);
               const colSchedules = weekSchedules.filter(a => isSameDay(new Date(a.startAt), day));
-
               return (
                 <div
                   key={colIdx}
@@ -217,7 +234,6 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                     isTodayCol && 'bg-blue-50/20 dark:bg-blue-900/5',
                   )}
                 >
-                  {/* Hour lines */}
                   {HOURS.map((_, i) => (
                     <div
                       key={i}
@@ -225,8 +241,6 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                       style={{ top: i * HOUR_H, height: HOUR_H }}
                     />
                   ))}
-
-                  {/* Current time indicator */}
                   {isTodayCol && isNowVisible && (
                     <div
                       className="absolute w-full z-10 pointer-events-none flex items-center"
@@ -236,37 +250,28 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                       <div className="flex-1 h-px bg-red-500" />
                     </div>
                   )}
-
-                  {/* Schedule blocks */}
                   {colSchedules.map(a => {
-                    const sH = new Date(a.startAt).getHours();
-                    const sM = new Date(a.startAt).getMinutes();
-                    const eH = a.endAt ? new Date(a.endAt).getHours()   : sH + 1;
-                    const eM = a.endAt ? new Date(a.endAt).getMinutes() : sM;
+                    const sH     = new Date(a.startAt).getHours();
+                    const sM     = new Date(a.startAt).getMinutes();
+                    const eH     = a.endAt ? new Date(a.endAt).getHours()   : sH + 1;
+                    const eM     = a.endAt ? new Date(a.endAt).getMinutes() : sM;
                     const top    = Math.max(0, (sH - GRID_START) * HOUR_H + (sM / 60) * HOUR_H);
                     const bottom = Math.min(HOURS.length * HOUR_H, (eH - GRID_START) * HOUR_H + (eM / 60) * HOUR_H);
                     const height = Math.max(18, bottom - top);
                     const color  = getColor(a);
-
                     return (
                       <button
                         key={a.id}
                         onClick={() => setSelectedSchedule(prev => prev?.id === a.id ? null : a)}
                         className="absolute z-10 rounded overflow-hidden text-left"
-                        style={{
-                          top, height, left: 1, right: 1,
-                          backgroundColor: `${color}22`,
-                          borderLeft: `2px solid ${color}`,
-                        }}
+                        style={{ top, height, left: 1, right: 1, backgroundColor: `${color}22`, borderLeft: `2px solid ${color}` }}
                       >
                         <div className="px-0.5 py-0.5">
                           <div className="text-[10px] font-semibold tabular-nums leading-tight" style={{ color }}>
                             {`${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`}
                           </div>
                           {height >= 36 && (
-                            <div className="text-[9px] truncate leading-tight" style={{ color }}>
-                              {a.title}
-                            </div>
+                            <div className="text-[9px] truncate leading-tight" style={{ color }}>{a.title}</div>
                           )}
                         </div>
                       </button>
@@ -279,7 +284,7 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
         </div>
       </div>
 
-      {/* ── Schedule detail panel ───────────────────────────── */}
+      {/* Detail panel */}
       {selectedSchedule && (
         <ScheduleDetailPanel
           agenda={selectedSchedule}
@@ -288,30 +293,25 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
         />
       )}
 
-      {/* ── Legend ───────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1">
-        {Object.entries(TYPE_LABEL).map(([type, label]) => (
-          <div key={type} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: TYPE_ACCENT[type] }} />
-            <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
-          </div>
-        ))}
+      {/* ── Legend: 스케줄 + 아젠다 ──────────────────────────── */}
+      <div className="flex items-center gap-4 px-1">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: TYPE_ACCENT.SCHEDULE }} />
           <span className="text-xs text-slate-500 dark:text-slate-400">스케줄</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: TYPE_ACCENT.AGENDA }} />
+          <span className="text-xs text-slate-500 dark:text-slate-400">아젠다</span>
         </div>
       </div>
     </div>
   );
 }
 
-function ScheduleDetailPanel({
-  agenda, onClose, onNavigate,
-}: { agenda: Agenda; onClose: () => void; onNavigate: () => void }) {
-  const color = getColor(agenda);
+function ScheduleDetailPanel({ agenda, onClose, onNavigate }: { agenda: Agenda; onClose: () => void; onNavigate: () => void }) {
+  const color  = getColor(agenda);
   const startH = new Date(agenda.startAt).getHours();
   const startM = new Date(agenda.startAt).getMinutes();
-
   const durationText = (() => {
     if (!agenda.endAt) return null;
     const mins = Math.round((new Date(agenda.endAt).getTime() - new Date(agenda.startAt).getTime()) / 60_000);
@@ -319,7 +319,6 @@ function ScheduleDetailPanel({
     const m = mins % 60;
     return `(${h > 0 ? `${h}시간 ` : ''}${m > 0 ? `${m}분` : ''})`.trim();
   })();
-
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
       <div className="h-1" style={{ backgroundColor: color }} />
@@ -329,10 +328,7 @@ function ScheduleDetailPanel({
             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
             <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{agenda.title}</span>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0"
-          >
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>

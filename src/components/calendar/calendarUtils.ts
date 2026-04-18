@@ -7,8 +7,8 @@ export const TYPE_ACCENT: Record<string, string> = {
   DEADLINE: '#F43F5E',
   TRIP:     '#F59E0B',
   OTHER:    '#8B5CF6',
-  SCHEDULE: '#0D9488', // teal — AgendaCard bg-teal-500 기준
-  AGENDA:   '#8B5CF6', // violet — AgendaCard bg-violet-400 기준
+  SCHEDULE: '#0D9488', // teal
+  AGENDA:   '#8B5CF6', // violet
 };
 
 export const TYPE_LABEL: Record<string, string> = {
@@ -20,8 +20,8 @@ export const TYPE_LABEL: Record<string, string> = {
 };
 
 export function getColor(agenda: Agenda): string {
-  if (agenda.category === 'SCHEDULE') return TYPE_ACCENT.SCHEDULE; // 스케줄 → 고정 teal
-  return TYPE_ACCENT.AGENDA; // 아젠다 → 고정 violet (AgendaCard 좌측 바와 통일)
+  if (agenda.category === 'SCHEDULE') return TYPE_ACCENT.SCHEDULE;
+  return TYPE_ACCENT.AGENDA;
 }
 
 export function getAmPm(isoDate: string): '오전' | '오후' {
@@ -35,6 +35,12 @@ export function daysLeft(deadline: string): number {
 export function formatHHMM(iso: string): string {
   const d = new Date(iso);
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
+
+/** SCHEDULE이고 startAt ≠ endAt 날짜인 다일(multi-day) 스케줄 여부 */
+export function isMultiDaySchedule(agenda: Agenda): boolean {
+  if (agenda.category !== 'SCHEDULE' || !agenda.endAt) return false;
+  return !isSameDay(new Date(agenda.startAt), new Date(agenda.endAt));
 }
 
 export function getWeekDays(date: Date): Date[] {
@@ -55,37 +61,47 @@ export function getMonthCells(year: number, month: number): Array<Date | null> {
 
 export function getAgendasForDay(agendas: Agenda[], day: Date): Agenda[] {
   const dayStart = startOfDay(day);
-  const dayEnd = endOfDay(day);
+  const dayEnd   = endOfDay(day);
   return agendas.filter(a => {
     const start = new Date(a.startAt);
-    if (a.category === 'SCHEDULE') return isSameDay(start, day);
+    if (a.category === 'SCHEDULE') {
+      const end = a.endAt ? new Date(a.endAt) : start;
+      return start <= dayEnd && end >= dayStart;
+    }
     const deadline = a.deadline ? new Date(a.deadline) : null;
     return start <= dayEnd && (deadline === null || deadline >= dayStart);
   });
 }
 
 export function getActiveAgendas(agendas: Agenda[]): Agenda[] {
-  const now = new Date();
+  const now   = new Date();
   const today = startOfDay(now);
   return agendas.filter(a => {
     if (a.category !== 'AGENDA' || a.isCompleted) return false;
-    const start = new Date(a.startAt);
+    const start    = new Date(a.startAt);
     const deadline = a.deadline ? new Date(a.deadline) : null;
     return start <= now && (deadline === null || deadline >= today);
   });
 }
 
+/** 오늘 해당 스케줄 목록 (다일 스케줄도 오늘 범위 안이면 포함) */
 export function getTodaySchedules(agendas: Agenda[]): Agenda[] {
-  const now = new Date();
+  const todayStart = startOfDay(new Date());
+  const todayEnd   = endOfDay(new Date());
   return agendas
-    .filter(a => a.category === 'SCHEDULE' && isSameDay(new Date(a.startAt), now))
+    .filter(a => {
+      if (a.category !== 'SCHEDULE') return false;
+      const start = new Date(a.startAt);
+      const end   = a.endAt ? new Date(a.endAt) : start;
+      return start <= todayEnd && end >= todayStart;
+    })
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 }
 
 export function getScheduleStatus(agenda: Agenda): 'past' | 'current' | 'upcoming' {
-  const now = new Date();
+  const now   = new Date();
   const start = new Date(agenda.startAt);
-  const end = agenda.endAt ? new Date(agenda.endAt) : null;
+  const end   = agenda.endAt ? new Date(agenda.endAt) : null;
   if (end && end < now) return 'past';
   if (start <= now && (!end || end > now)) return 'current';
   if (start < now && !end) return 'past';
