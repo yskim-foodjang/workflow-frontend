@@ -91,7 +91,9 @@ export default function AgendasPage() {
         />
       ) : (
         <div className="space-y-2">
-          {agendas.map((agenda) => <AgendaCard key={agenda.id} agenda={agenda} />)}
+          {[...agendas]
+            .sort((a, b) => Number(a.isCompleted) - Number(b.isCompleted))
+            .map((agenda) => <AgendaCard key={agenda.id} agenda={agenda} />)}
           {hasMore && (
             <button onClick={loadMore} className="w-full py-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
               더 보기
