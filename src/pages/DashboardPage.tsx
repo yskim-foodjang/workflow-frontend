@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, CATEGORY_LABELS, CATEGORY_BG } from '@/utils/constants';
-import { format, isToday, isThisWeek, isSameDay, differenceInDays } from 'date-fns';
+import { format, isToday, isThisWeek, isSameDay, differenceInDays, startOfDay, endOfDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Card, Badge, PageHeader, Skeleton, StatCardSkeleton } from '@/components/ui';
 import api from '@/utils/api';
@@ -54,7 +54,11 @@ export default function DashboardPage() {
     if (a.isCompleted) return false;
     const now = new Date();
     const start = new Date(a.startAt);
-    if (a.category === 'SCHEDULE') return isToday(start);
+    if (a.category === 'SCHEDULE') {
+      // 오늘 시작하거나, 다일 스케줄이 오늘에 걸쳐 진행 중인 경우
+      const end = a.endAt ? new Date(a.endAt) : start;
+      return start <= endOfDay(now) && end >= startOfDay(now);
+    }
     // AGENDA: 오늘이 시작일~마감일 사이
     const deadline = a.deadline ? new Date(a.deadline) : null;
     return start <= now && (deadline === null || deadline >= new Date(now.toDateString()));
