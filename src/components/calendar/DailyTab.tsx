@@ -98,12 +98,17 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
           <span className="text-sm font-semibold text-slate-900 dark:text-white">
             {format(selectedDate, 'M월 d일 EEE', { locale: ko })}
           </span>
+          {isSelectedToday && (
+            <span className="text-xs px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium">
+              오늘
+            </span>
+          )}
           {!isSelectedToday && (
             <button
               onClick={() => onDateSelect(new Date())}
-              className="text-xs px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium"
+              className="text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
             >
-              오늘
+              오늘로
             </button>
           )}
         </div>
