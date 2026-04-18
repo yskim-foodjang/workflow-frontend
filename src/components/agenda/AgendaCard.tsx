@@ -10,13 +10,23 @@ import { queryKeys } from '@/lib/queryKeys';
 import api from '@/utils/api';
 import type { Agenda, ApiResponse } from '@/types';
 
-/** 마감일 기준 D-day 레이블 + 색상 클래스 반환 */
-function getDdayInfo(deadline: string, isCompleted: boolean) {
+type DdayInfo = { label: string; color: string };
+
+/** 아젠다 마감일 기준 — 초과 시 '기한초과' */
+function getAgendaDday(deadline: string, isCompleted: boolean): DdayInfo | null {
   if (isCompleted) return null;
   const diff = differenceInCalendarDays(new Date(deadline), new Date());
-  if (diff > 0)  return { label: `D-${diff}`,  color: diff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
+  if (diff > 0)   return { label: `D-${diff}`, color: diff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
   if (diff === 0) return { label: 'D-0',        color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
-  return           { label: '기한초과',          color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+  return                  { label: '기한초과',   color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+}
+
+/** 스케줄 시작일 기준 — 지난 일정은 null (기한초과 없음) */
+function getScheduleDday(startAt: string): DdayInfo | null {
+  const diff = differenceInCalendarDays(new Date(startAt), new Date());
+  if (diff < 0)   return null;
+  if (diff === 0) return { label: 'D-0',       color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+  return                  { label: `D-${diff}`, color: diff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
 }
 
 interface AgendaCardProps {
@@ -25,8 +35,10 @@ interface AgendaCardProps {
 
 export default function AgendaCard({ agenda }: AgendaCardProps) {
   const queryClient = useQueryClient();
-  const deadlineMs = agenda.deadline ? new Date(agenda.deadline).getTime() - Date.now() : null;
-  const ddayInfo = agenda.deadline ? getDdayInfo(agenda.deadline, agenda.isCompleted) : null;
+  const deadlineMs  = agenda.deadline ? new Date(agenda.deadline).getTime() - Date.now() : null;
+  const ddayInfo    = agenda.category === 'AGENDA'
+    ? (agenda.deadline ? getAgendaDday(agenda.deadline, agenda.isCompleted) : null)
+    : getScheduleDday(agenda.startAt);
 
   // 카드에 마우스를 올리면 상세 데이터를 미리 prefetch
   const handleMouseEnter = useCallback(() => {
@@ -48,49 +60,69 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
           agenda.category === 'AGENDA' ? 'bg-violet-400' : 'bg-teal-500'
         )} />
         <div className="flex-1 min-w-0">
-          {/* 제목 줄 — 제목+배지(왼쪽) + 참여자 아바타(오른쪽) */}
+          {/* ── 제목 줄: [제목 + 배지들] ─────── [아바타] ── */}
           <div className="flex items-center gap-2 mb-1">
-            <h3 className={clsx('font-medium truncate flex-1 min-w-0', agenda.isCompleted
-              ? 'line-through text-slate-400 dark:text-slate-500'
-              : 'text-slate-900 dark:text-white'
-            )}>
-              {agenda.title}
-            </h3>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Badge className={CATEGORY_BG[agenda.category]}>{CATEGORY_LABELS[agenda.category]}</Badge>
+            {/* 제목 + 배지 묶음 (flex-1로 공간 차지, 제목만 truncate) */}
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <h3 className={clsx('font-medium truncate min-w-0 shrink', agenda.isCompleted
+                ? 'line-through text-slate-400 dark:text-slate-500'
+                : 'text-slate-900 dark:text-white'
+              )}>
+                {agenda.title}
+              </h3>
+              <Badge className={clsx(CATEGORY_BG[agenda.category], 'flex-shrink-0')}>
+                {CATEGORY_LABELS[agenda.category]}
+              </Badge>
               {agenda.category === 'SCHEDULE' && (
-                <Badge className={AGENDA_TYPE_BG[agenda.type]}>{AGENDA_TYPE_LABELS[agenda.type]}</Badge>
-              )}
-              {agenda.participants.length > 0 && (
-                <AvatarGroup names={agenda.participants.map((p) => p.user.name)} />
+                <Badge className={clsx(AGENDA_TYPE_BG[agenda.type], 'flex-shrink-0')}>
+                  {AGENDA_TYPE_LABELS[agenda.type]}
+                </Badge>
               )}
             </div>
+            {/* 아바타 — 오른쪽 고정 */}
+            {agenda.participants.length > 0 && (
+              <AvatarGroup names={agenda.participants.map((p) => p.user.name)} />
+            )}
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+
+          {/* ── 메타 줄 ───────────────────────────────────── */}
+          <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+            {/* 날짜 */}
             {agenda.category === 'SCHEDULE' ? (
               <span>{format(new Date(agenda.startAt), 'M/d (EEE) HH:mm', { locale: ko })}</span>
             ) : (
               <span>{format(new Date(agenda.startAt), 'M/d (EEE)', { locale: ko })}</span>
             )}
-            {agenda.deadline && (
-              <span className="flex items-center gap-1.5">
-                <span className={clsx('font-medium', {
-                  'text-rose-500':  deadlineMs !== null && deadlineMs < 24 * 60 * 60 * 1000,
-                  'text-amber-500': deadlineMs !== null && deadlineMs >= 24 * 60 * 60 * 1000 && deadlineMs < 3 * 24 * 60 * 60 * 1000,
-                })}>
-                  {(() => {
-                    const d = new Date(agenda.deadline);
-                    const ampm = d.getHours() < 12 ? '오전' : '오후';
-                    return `마감: ${format(d, 'M/d')} (${ampm})`;
-                  })()}
-                </span>
-                {ddayInfo && (
-                  <span className={clsx('text-[11px] font-semibold px-1.5 py-0.5 rounded-md', ddayInfo.color)}>
-                    {ddayInfo.label}
-                  </span>
-                )}
+
+            {/* 아젠다: 마감일 */}
+            {agenda.category === 'AGENDA' && agenda.deadline && (
+              <span className={clsx('font-medium', {
+                'text-rose-500':  deadlineMs !== null && deadlineMs < 24 * 60 * 60 * 1000,
+                'text-amber-500': deadlineMs !== null && deadlineMs >= 24 * 60 * 60 * 1000 && deadlineMs < 3 * 24 * 60 * 60 * 1000,
+              })}>
+                {(() => {
+                  const d = new Date(agenda.deadline);
+                  const ampm = d.getHours() < 12 ? '오전' : '오후';
+                  return `마감 ${format(d, 'M/d')}(${ampm})`;
+                })()}
               </span>
             )}
+
+            {/* D-day 배지 (아젠다·스케줄 공통) */}
+            {ddayInfo && (
+              <span className={clsx('font-semibold px-1.5 py-0.5 rounded-md', ddayInfo.color)}>
+                {ddayInfo.label}
+              </span>
+            )}
+
+            {/* 아젠다 전용: 보고방식 */}
+            {agenda.category === 'AGENDA' && agenda.reportMethod && (
+              <span className="truncate max-w-[120px]" title={agenda.reportMethod}>
+                {agenda.reportMethod}
+              </span>
+            )}
+
+            {/* 댓글 수 */}
             {agenda._count && agenda._count.comments > 0 && (
               <span className="flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
