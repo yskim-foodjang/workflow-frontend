@@ -22,19 +22,23 @@ function getAgendaDday(deadline: string, isCompleted: boolean): DdayInfo | null 
 }
 
 /** 스케줄 D-day
- * - 시작 전: D-N (시작일 기준 카운트다운)
- * - 당일/진행 중(endAt 미도래): D-0
- * - 종료 후(endAt 또는 startAt 경과): 완료 요청
+ * - 시작 전:        D-N (시작일 기준 카운트다운)
+ * - 단일 당일:      D-0
+ * - 다일 진행 중:   진행 중 (startAt 경과 ~ endAt 미도래)
+ * - 종료 후:        완료 요청
  */
 function getScheduleDday(startAt: string, endAt: string | null, isCompleted: boolean): DdayInfo | null {
   if (isCompleted) return null;
-  const startDiff = differenceInCalendarDays(new Date(startAt), new Date());
+  const startDiff  = differenceInCalendarDays(new Date(startAt), new Date());
   // 종료 기준: endAt이 있으면 endAt, 없으면 startAt
-  const endDiff   = differenceInCalendarDays(new Date(endAt ?? startAt), new Date());
+  const endDiff    = differenceInCalendarDays(new Date(endAt ?? startAt), new Date());
+  const isMultiDay = endAt !== null && differenceInCalendarDays(new Date(endAt), new Date(startAt)) > 0;
 
-  if (endDiff < 0)    return { label: '완료 요청', color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
-  if (startDiff <= 0) return { label: 'D-0',       color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
-  return                     { label: `D-${startDiff}`, color: startDiff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
+  if (endDiff < 0)   return { label: '완료 요청', color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+  if (startDiff > 0) return { label: `D-${startDiff}`, color: startDiff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
+  // startDiff <= 0, endDiff >= 0
+  if (isMultiDay)    return { label: '진행 중', color: 'text-teal-600 bg-teal-50 dark:bg-teal-900/20 dark:text-teal-400' };
+  return                    { label: 'D-0',     color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
 }
 
 interface AgendaCardProps {
