@@ -284,12 +284,16 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, holi
               const color   = getColor(a);
               const status  = getScheduleStatus(a);
               const isMulti = isMultiDaySchedule(a);
+              // 시간 정보 — 단일: HH:mm ~ HH:mm / 다일: M/d(EEE) HH:mm ~ M/d(EEE) HH:mm
+              const timeText = isMulti
+                ? `${format(new Date(a.startAt), 'M/d(EEE) HH:mm', { locale: ko })}${a.endAt ? ` ~ ${format(new Date(a.endAt), 'M/d(EEE) HH:mm', { locale: ko })}` : ''}`
+                : `${formatHHMM(a.startAt)}${a.endAt ? ` ~ ${formatHHMM(a.endAt)}` : ''}`;
               return (
                 <button
                   key={a.id}
                   onClick={() => navigate(`/agendas/${a.id}`)}
                   className={clsx(
-                    'w-full px-3 py-2.5 flex items-center gap-3 transition-colors text-left relative',
+                    'w-full px-3 py-2.5 flex items-center gap-2.5 transition-colors text-left relative',
                     status === 'past' && 'opacity-50',
                     status !== 'past' && 'hover:bg-slate-50 dark:hover:bg-slate-700/50',
                     status === 'current' && 'bg-red-50/50 dark:bg-red-900/10',
@@ -298,20 +302,10 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, holi
                   {status === 'current' && (
                     <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-red-500 rounded-r" />
                   )}
-                  {/* 시간 컬럼 — 다일이면 날짜+시간 2줄 */}
-                  <div className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500 flex-shrink-0 w-16 text-right leading-snug">
-                    <div>{isMulti ? format(new Date(a.startAt), 'M/d(EEE) HH:mm', { locale: ko }) : formatHHMM(a.startAt)}</div>
-                    {a.endAt && (
-                      <div className="opacity-70">
-                        {isMulti ? format(new Date(a.endAt), 'M/d(EEE) HH:mm', { locale: ko }) : formatHHMM(a.endAt)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-medium text-slate-900 dark:text-white truncate">{a.title}</span>
-                      {/* 유형 배지 */}
                       {TYPE_LABEL[a.type] && (
                         <span
                           className="text-[10px] px-1 py-0.5 rounded flex-shrink-0"
@@ -321,6 +315,7 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, holi
                         </span>
                       )}
                     </div>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{timeText}</p>
                   </div>
                 </button>
               );
