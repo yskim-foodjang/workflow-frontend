@@ -131,11 +131,11 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">부서(공장) *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">회사 *</label>
                   <input type="text" value={form.factoryName} onChange={set('factoryName')} className="input-field" placeholder="○○공장" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">팀 *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">부서 *</label>
                   <input type="text" value={form.teamName} onChange={set('teamName')} className="input-field" placeholder="생산팀" required />
                 </div>
               </div>

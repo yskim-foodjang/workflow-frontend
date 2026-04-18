@@ -125,11 +125,11 @@ export default function ProfilePage() {
             <dd className="text-sm text-slate-900 dark:text-white">{user?.email}</dd>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
-            <dt className="text-sm text-slate-500 dark:text-slate-400">부서(공장)</dt>
+            <dt className="text-sm text-slate-500 dark:text-slate-400">회사</dt>
             <dd className="text-sm text-slate-900 dark:text-white">{user?.department?.name || '-'}</dd>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
-            <dt className="text-sm text-slate-500 dark:text-slate-400">팀</dt>
+            <dt className="text-sm text-slate-500 dark:text-slate-400">부서</dt>
             <dd className="text-sm text-slate-900 dark:text-white">{user?.team?.name || '-'}</dd>
           </div>
           <div className="flex justify-between py-2">
@@ -176,8 +176,8 @@ export default function ProfilePage() {
               {pendingRequest.requestedName && <p>이름: {pendingRequest.requestedName}</p>}
               {pendingRequest.requestedPosition !== null && <p>직책: {pendingRequest.requestedPosition || '(삭제)'}</p>}
               {pendingRequest.requestedPhone !== null && <p>연락처: {pendingRequest.requestedPhone || '(삭제)'}</p>}
-              {pendingRequest.requestedDepartmentName && <p>부서: {pendingRequest.requestedDepartmentName}</p>}
-              {pendingRequest.requestedTeamName && <p>팀: {pendingRequest.requestedTeamName}</p>}
+              {pendingRequest.requestedDepartmentName && <p>회사: {pendingRequest.requestedDepartmentName}</p>}
+              {pendingRequest.requestedTeamName && <p>부서: {pendingRequest.requestedTeamName}</p>}
             </div>
             {pendingRequest.adminNote && (
               <p className="mt-1.5 text-xs opacity-70">관리자 메모: {pendingRequest.adminNote}</p>
@@ -227,26 +227,26 @@ export default function ProfilePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                부서 <span className="text-xs font-normal text-slate-400">(현재: {user?.department?.name || '-'})</span>
+                회사 <span className="text-xs font-normal text-slate-400">(현재: {user?.department?.name || '-'})</span>
               </label>
               <input
                 type="text"
                 value={editForm.departmentName}
                 onChange={(e) => setEditForm((f) => ({ ...f, departmentName: e.target.value }))}
                 className="input-field"
-                placeholder="변경할 부서명 (비워두면 유지)"
+                placeholder="변경할 회사명 (비워두면 유지)"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                팀 <span className="text-xs font-normal text-slate-400">(현재: {user?.team?.name || '-'})</span>
+                부서 <span className="text-xs font-normal text-slate-400">(현재: {user?.team?.name || '-'})</span>
               </label>
               <input
                 type="text"
                 value={editForm.teamName}
                 onChange={(e) => setEditForm((f) => ({ ...f, teamName: e.target.value }))}
                 className="input-field"
-                placeholder="변경할 팀명 (비워두면 유지)"
+                placeholder="변경할 부서명 (비워두면 유지)"
               />
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">

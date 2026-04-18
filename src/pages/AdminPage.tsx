@@ -10,7 +10,7 @@ const adminTabs = [
   { to: '/admin', label: '개요', end: true },
   { to: '/admin/approvals', label: '승인 관리' },
   { to: '/admin/users', label: '사용자 관리' },
-  { to: '/admin/departments', label: '부서/팀 관리' },
+  { to: '/admin/departments', label: '회사/부서 관리' },
   { to: '/admin/stats', label: '통계' },
 ];
 
@@ -241,10 +241,10 @@ export function AdminUsers() {
                         <p><span className="text-slate-400">연락처:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.phone ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedPhone || '-'}</span></p>
                       )}
                       {req.requestedDepartmentName && (
-                        <p><span className="text-slate-400">부서:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.department?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedDepartmentName}</span></p>
+                        <p><span className="text-slate-400">회사:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.department?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedDepartmentName}</span></p>
                       )}
                       {req.requestedTeamName && (
-                        <p><span className="text-slate-400">팀:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.team?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedTeamName}</span></p>
+                        <p><span className="text-slate-400">부서:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.team?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedTeamName}</span></p>
                       )}
                     </div>
                   </div>
@@ -402,8 +402,8 @@ export function AdminUsers() {
             </div>
             <dl className="space-y-2.5 text-sm">
               {[
-                { label: '부서', value: viewTarget.department?.name ?? '-' },
-                { label: '팀', value: viewTarget.team?.name ?? '-' },
+                { label: '회사', value: viewTarget.department?.name ?? '-' },
+                { label: '부서', value: viewTarget.team?.name ?? '-' },
                 { label: '직책', value: viewTarget.position ?? '-' },
                 { label: '연락처', value: viewTarget.phone ?? '-' },
                 { label: '권한', value: ROLE_LABEL[viewTarget.role] ?? viewTarget.role },
