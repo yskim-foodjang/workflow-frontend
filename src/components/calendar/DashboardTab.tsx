@@ -107,7 +107,9 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, onMo
                   const isTodayCell    = isToday(day);
                   const isSelected     = isSameDay(day, selectedDate) && !isTodayCell;
                   const dayAgendas     = getAgendasForDay(agendas, day);
-                  const colors         = dayAgendas.map(getColor);
+                  // 간트바로 이미 표시되는 다일 스케줄은 점에서 제외
+                  const dotAgendas     = dayAgendas.filter(a => !isMultiDaySchedule(a));
+                  const colors         = dotAgendas.map(getColor);
                   const total          = colors.length;
                   const shown          = total >= 7 ? colors.slice(0, 5) : colors.slice(0, 6);
                   const extra          = total >= 7 ? total - 5 : 0;

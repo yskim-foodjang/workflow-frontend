@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import type { Agenda } from '@/types';
 import {
   getColor, formatHHMM, getWeekDays, daysLeft, getAmPm,
-  getAgendasForDay, getScheduleStatus, isMultiDaySchedule, TYPE_LABEL,
+  getAgendasForDay, getScheduleStatus,
 } from './calendarUtils';
 
 interface Props {
@@ -45,24 +45,19 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
     });
   }, [agendas, selectedDate]);
 
-  // Multi-day schedules spanning today → shown as all-day bars above timeline
-  const allDaySchedules = useMemo(() => {
+  // 단일 + 다일 포함 이 날짜와 겹치는 모든 SCHEDULE → 시간 그리드에 표시
+  const daySchedules = useMemo(() => {
     const dayStart = startOfDay(selectedDate);
     const dayEnd   = endOfDay(selectedDate);
-    return agendas.filter(a => {
-      if (!isMultiDaySchedule(a)) return false;
-      const start = new Date(a.startAt);
-      const end   = new Date(a.endAt!);
-      return start <= dayEnd && end >= dayStart;
-    });
+    return agendas
+      .filter(a => {
+        if (a.category !== 'SCHEDULE') return false;
+        const start = new Date(a.startAt);
+        const end   = a.endAt ? new Date(a.endAt) : start;
+        return start <= dayEnd && end >= dayStart;
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
   }, [agendas, selectedDate]);
-
-  // Single-day schedules only in time grid
-  const timeSchedules = useMemo(() => (
-    agendas
-      .filter(a => a.category === 'SCHEDULE' && !isMultiDaySchedule(a) && isSameDay(new Date(a.startAt), selectedDate))
-      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-  ), [agendas, selectedDate]);
 
   const weekDotColors = useMemo(() => (
     weekDays.map(d => {
@@ -108,7 +103,7 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
               onClick={() => onDateSelect(new Date())}
               className="text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
             >
-              오늘로
+              오늘 이동
             </button>
           )}
         </div>
@@ -163,42 +158,6 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
           })}
         </div>
       </div>
-
-      {/* ── 다일 스케줄 (all-day bars) ────────────────────────── */}
-      {allDaySchedules.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300">종일</h3>
-          </div>
-          <div className="p-2 space-y-1">
-            {allDaySchedules.map(a => {
-              const color = getColor(a);
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => navigate(`/agendas/${a.id}`)}
-                  className="w-full flex items-center hover:opacity-80 transition-opacity"
-                >
-                  <div
-                    className="h-6 rounded flex-1 flex items-center justify-between px-2 text-[11px] font-medium text-white overflow-hidden"
-                    style={{ backgroundColor: color }}
-                  >
-                    <span className="truncate flex-1">{a.title}</span>
-                    {TYPE_LABEL[a.type] && (
-                      <span className="ml-2 flex-shrink-0 text-white/80 text-[10px]">
-                        {TYPE_LABEL[a.type]}
-                      </span>
-                    )}
-                    <span className="ml-2 flex-shrink-0 text-white/70 text-[10px] tabular-nums">
-                      {format(new Date(a.startAt), 'M/d', { locale: ko })}–{format(new Date(a.endAt!), 'M/d', { locale: ko })}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ── 진행중 아젠다 ─────────────────────────────────────── */}
       {activeAgendas.length > 0 && (
@@ -271,14 +230,20 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
               </div>
             )}
 
-            {/* Schedule blocks (single-day only) */}
-            {timeSchedules.map(a => {
-              const sH = new Date(a.startAt).getHours();
-              const sM = new Date(a.startAt).getMinutes();
-              const eH = a.endAt ? new Date(a.endAt).getHours()   : sH + 1;
-              const eM = a.endAt ? new Date(a.endAt).getMinutes() : sM;
+            {/* Schedule blocks (단일 + 다일 모두, 해당 날 구간 계산) */}
+            {daySchedules.map(a => {
+              const aStart     = new Date(a.startAt);
+              const aEnd       = a.endAt ? new Date(a.endAt) : aStart;
+              const isStartDay = isSameDay(aStart, selectedDate);
+              const isEndDay   = isSameDay(aEnd, selectedDate);
+              // 이 날짜의 표시 구간
+              const sH = isStartDay ? aStart.getHours()   : GRID_START;
+              const sM = isStartDay ? aStart.getMinutes() : 0;
+              const eH = isEndDay   ? aEnd.getHours()     : GRID_END;
+              const eM = isEndDay   ? aEnd.getMinutes()   : 0;
               const top    = Math.max(0, (sH - GRID_START) * HOUR_H + (sM / 60) * HOUR_H);
               const bottom = Math.min(HOURS.length * HOUR_H, (eH - GRID_START) * HOUR_H + (eM / 60) * HOUR_H);
+              if (top >= HOURS.length * HOUR_H || bottom <= 0) return null;
               const height = Math.max(22, bottom - top);
               const color  = getColor(a);
               const status = getScheduleStatus(a);
@@ -296,14 +261,15 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
                     left: 48 + 4,
                     right: 4,
                     backgroundColor: `${color}18`,
-                    borderLeft: status === 'current'
-                      ? '3px solid #EF4444'
-                      : `2px solid ${color}`,
+                    borderLeft: status === 'current' ? '3px solid #EF4444' : `2px solid ${color}`,
+                    borderTop:    isStartDay ? undefined : 'none',
+                    borderBottom: isEndDay   ? undefined : 'none',
+                    borderRadius: `${isStartDay ? 4 : 0}px ${isStartDay ? 4 : 0}px ${isEndDay ? 4 : 0}px ${isEndDay ? 4 : 0}px`,
                   }}
                 >
                   <div className="px-2 py-1">
                     <div className="text-xs font-semibold truncate" style={{ color }}>{a.title}</div>
-                    {height >= 40 && (
+                    {height >= 40 && isStartDay && (
                       <div className="text-[10px] tabular-nums mt-0.5" style={{ color: `${color}99` }}>
                         {formatHHMM(a.startAt)}{a.endAt && ` – ${formatHHMM(a.endAt)}`}
                       </div>

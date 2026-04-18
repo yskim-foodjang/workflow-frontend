@@ -40,31 +40,29 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
     return isSameDay(weekDays[0], thisStart);
   }, [weekDays]);
 
-  // 간트 영역: AGENDA + 다일 SCHEDULE
+  // 간트 영역: AGENDA만 (다일 SCHEDULE은 시간 그리드로 이동)
   const weekGanttItems = useMemo(() => {
     const wStart = startOfDay(weekDays[0]);
     const wEnd   = endOfDay(weekDays[6]);
     return agendas.filter(a => {
+      if (a.category !== 'AGENDA') return false;
       const start = new Date(a.startAt);
-      if (a.category === 'AGENDA') {
-        const end = a.deadline ? new Date(a.deadline) : a.endAt ? new Date(a.endAt) : start;
-        return start <= wEnd && end >= wStart;
-      }
-      if (isMultiDaySchedule(a)) {
-        return start <= wEnd && new Date(a.endAt!) >= wStart;
-      }
-      return false;
+      const end = a.deadline ? new Date(a.deadline) : a.endAt ? new Date(a.endAt) : start;
+      return start <= wEnd && end >= wStart;
     });
   }, [agendas, weekDays]);
 
-  // 시간 그리드: 단일 SCHEDULE만
-  const weekSchedules = useMemo(() => (
-    agendas.filter(a =>
-      a.category === 'SCHEDULE' &&
-      !isMultiDaySchedule(a) &&
-      weekDays.some(d => isSameDay(new Date(a.startAt), d))
-    )
-  ), [agendas, weekDays]);
+  // 시간 그리드: 단일 + 다일 SCHEDULE 모두 (해당 주와 겹치는 것)
+  const weekSchedules = useMemo(() => {
+    const wStart = startOfDay(weekDays[0]);
+    const wEnd   = endOfDay(weekDays[6]);
+    return agendas.filter(a => {
+      if (a.category !== 'SCHEDULE') return false;
+      const start = new Date(a.startAt);
+      const end   = a.endAt ? new Date(a.endAt) : start;
+      return start <= wEnd && end >= wStart;
+    });
+  }, [agendas, weekDays]);
 
   const weekLabel = useMemo(() => {
     const wn = getISOWeek(weekDays[0]);
@@ -114,7 +112,7 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
               onClick={() => onDateSelect(new Date())}
               className="text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
             >
-              오늘로
+              오늘 이동
             </button>
           )}
         </div>
@@ -230,7 +228,12 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
             {/* Day columns */}
             {weekDays.map((day, colIdx) => {
               const isTodayCol   = isToday(day);
-              const colSchedules = weekSchedules.filter(a => isSameDay(new Date(a.startAt), day));
+              // 이 날짜와 겹치는 모든 스케줄 (단일 + 다일)
+              const colSchedules = weekSchedules.filter(a => {
+                const start = new Date(a.startAt);
+                const end   = a.endAt ? new Date(a.endAt) : start;
+                return start <= endOfDay(day) && end >= startOfDay(day);
+              });
               return (
                 <div
                   key={colIdx}
@@ -256,12 +259,18 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                     </div>
                   )}
                   {colSchedules.map(a => {
-                    const sH     = new Date(a.startAt).getHours();
-                    const sM     = new Date(a.startAt).getMinutes();
-                    const eH     = a.endAt ? new Date(a.endAt).getHours()   : sH + 1;
-                    const eM     = a.endAt ? new Date(a.endAt).getMinutes() : sM;
+                    const aStart     = new Date(a.startAt);
+                    const aEnd       = a.endAt ? new Date(a.endAt) : aStart;
+                    const isStartDay = isSameDay(aStart, day);
+                    const isEndDay   = isSameDay(aEnd, day);
+                    // 이 날짜의 표시 구간 계산
+                    const sH = isStartDay ? aStart.getHours()   : GRID_START;
+                    const sM = isStartDay ? aStart.getMinutes() : 0;
+                    const eH = isEndDay   ? aEnd.getHours()     : GRID_END;
+                    const eM = isEndDay   ? aEnd.getMinutes()   : 0;
                     const top    = Math.max(0, (sH - GRID_START) * HOUR_H + (sM / 60) * HOUR_H);
                     const bottom = Math.min(HOURS.length * HOUR_H, (eH - GRID_START) * HOUR_H + (eM / 60) * HOUR_H);
+                    if (top >= HOURS.length * HOUR_H || bottom <= 0) return null;
                     const height = Math.max(18, bottom - top);
                     const color  = getColor(a);
                     return (
@@ -269,13 +278,22 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                         key={a.id}
                         onClick={() => setSelectedSchedule(prev => prev?.id === a.id ? null : a)}
                         className="absolute z-10 rounded overflow-hidden text-left"
-                        style={{ top, height, left: 1, right: 1, backgroundColor: `${color}22`, borderLeft: `2px solid ${color}` }}
+                        style={{
+                          top, height, left: 1, right: 1,
+                          backgroundColor: `${color}22`,
+                          borderLeft: `2px solid ${color}`,
+                          borderTop:    isStartDay ? `1px solid ${color}44` : 'none',
+                          borderBottom: isEndDay   ? `1px solid ${color}44` : 'none',
+                          borderRadius: `${isStartDay ? 2 : 0}px ${isStartDay ? 2 : 0}px ${isEndDay ? 2 : 0}px ${isEndDay ? 2 : 0}px`,
+                        }}
                       >
                         <div className="px-0.5 py-0.5">
                           <div className="text-[10px] font-semibold tabular-nums leading-tight" style={{ color }}>
-                            {`${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`}
+                            {isStartDay
+                              ? `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`
+                              : '↓'}
                           </div>
-                          {height >= 36 && (
+                          {(height >= 36 || !isStartDay) && (
                             <div className="text-[9px] truncate leading-tight" style={{ color }}>{a.title}</div>
                           )}
                         </div>
