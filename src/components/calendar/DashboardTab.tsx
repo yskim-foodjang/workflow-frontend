@@ -13,14 +13,13 @@ interface Props {
   selectedDate: Date;
   displayMonth: Date;
   agendas: Agenda[];
-  onDateSelect: (d: Date) => void;
   onMonthChange: (d: Date) => void;
   onSwitchToDaily: (d: Date) => void;
 }
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
-export default function DashboardTab({ selectedDate, displayMonth, agendas, onDateSelect, onMonthChange, onSwitchToDaily }: Props) {
+export default function DashboardTab({ selectedDate, displayMonth, agendas, onMonthChange, onSwitchToDaily }: Props) {
   const navigate = useNavigate();
   const year = displayMonth.getFullYear();
   const month = displayMonth.getMonth();

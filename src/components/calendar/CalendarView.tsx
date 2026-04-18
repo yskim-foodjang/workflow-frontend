@@ -94,7 +94,6 @@ export default function CalendarView() {
           selectedDate={selectedDate}
           displayMonth={displayMonth}
           agendas={agendas}
-          onDateSelect={handleDateSelect}
           onMonthChange={setDisplayMonth}
           onSwitchToDaily={handleSwitchToDaily}
         />
