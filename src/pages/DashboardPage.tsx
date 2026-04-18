@@ -142,11 +142,15 @@ export default function DashboardPage() {
 
                 let timeInfo = '';
                 if (isSchedule) {
-                  timeInfo = format(startDate, 'HH:mm', { locale: ko });
-                  if (endDate) {
-                    timeInfo += isSameDay(startDate, endDate)
-                      ? ` ~ ${format(endDate, 'HH:mm', { locale: ko })}`
-                      : ` ~ ${format(endDate, 'M/d HH:mm', { locale: ko })}`;
+                  const isMultiDay = endDate && !isSameDay(startDate, endDate);
+                  if (isMultiDay) {
+                    // 다일 스케줄: 날짜+요일+시간 모두 표기
+                    timeInfo = format(startDate, 'M/d(EEE) HH:mm', { locale: ko });
+                    timeInfo += ` ~ ${format(endDate!, 'M/d(EEE) HH:mm', { locale: ko })}`;
+                  } else {
+                    // 단일 스케줄: 시간만
+                    timeInfo = format(startDate, 'HH:mm', { locale: ko });
+                    if (endDate) timeInfo += ` ~ ${format(endDate, 'HH:mm', { locale: ko })}`;
                   }
                 } else if (deadlineDate) {
                   const days = differenceInDays(deadlineDate, new Date());
