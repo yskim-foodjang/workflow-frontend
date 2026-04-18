@@ -21,12 +21,20 @@ function getAgendaDday(deadline: string, isCompleted: boolean): DdayInfo | null 
   return                  { label: '기한초과',   color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
 }
 
-/** 스케줄 시작일 기준 — 지난 일정은 null (기한초과 없음) */
-function getScheduleDday(startAt: string): DdayInfo | null {
-  const diff = differenceInCalendarDays(new Date(startAt), new Date());
-  if (diff < 0)   return null;
-  if (diff === 0) return { label: 'D-0',       color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
-  return                  { label: `D-${diff}`, color: diff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
+/** 스케줄 D-day
+ * - 시작 전: D-N (시작일 기준 카운트다운)
+ * - 당일/진행 중(endAt 미도래): D-0
+ * - 종료 후(endAt 또는 startAt 경과): 완료 요청
+ */
+function getScheduleDday(startAt: string, endAt: string | null, isCompleted: boolean): DdayInfo | null {
+  if (isCompleted) return null;
+  const startDiff = differenceInCalendarDays(new Date(startAt), new Date());
+  // 종료 기준: endAt이 있으면 endAt, 없으면 startAt
+  const endDiff   = differenceInCalendarDays(new Date(endAt ?? startAt), new Date());
+
+  if (endDiff < 0)    return { label: '완료 요청', color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+  if (startDiff <= 0) return { label: 'D-0',       color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+  return                     { label: `D-${startDiff}`, color: startDiff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
 }
 
 interface AgendaCardProps {
@@ -38,7 +46,7 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
   const deadlineMs  = agenda.deadline ? new Date(agenda.deadline).getTime() - Date.now() : null;
   const ddayInfo    = agenda.category === 'AGENDA'
     ? (agenda.deadline ? getAgendaDday(agenda.deadline, agenda.isCompleted) : null)
-    : getScheduleDday(agenda.startAt);
+    : getScheduleDday(agenda.startAt, agenda.endAt ?? null, agenda.isCompleted);
 
   // 카드에 마우스를 올리면 상세 데이터를 미리 prefetch
   const handleMouseEnter = useCallback(() => {
