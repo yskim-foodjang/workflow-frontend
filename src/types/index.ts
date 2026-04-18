@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'MEMBER';
+  role: 'ADMIN' | 'SUB_ADMIN' | 'MEMBER';
   position: string | null;
   profileImage: string | null;
   department: Department | null;
