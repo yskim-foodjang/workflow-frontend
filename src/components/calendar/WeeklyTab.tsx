@@ -9,9 +9,12 @@ import clsx from 'clsx';
 import type { Agenda } from '@/types';
 import { getColor, formatHHMM, getWeekDays, getAmPm, TYPE_ACCENT } from './calendarUtils';
 
+
+
 interface Props {
   selectedDate: Date;
   agendas: Agenda[];
+  holidays: Map<string, string>;
   onDateSelect: (d: Date) => void;
   onSwitchToDaily: (d: Date) => void;
 }
@@ -21,7 +24,7 @@ const HOUR_H     = 44;
 const GRID_START = 8;
 const GRID_END   = 19;
 
-export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitchToDaily }: Props) {
+export default function WeeklyTab({ selectedDate, agendas, holidays, onDateSelect, onSwitchToDaily }: Props) {
   const navigate = useNavigate();
   const [selectedSchedule, setSelectedSchedule] = useState<Agenda | null>(null);
   const [now, setNow] = useState(new Date());
@@ -135,6 +138,8 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
             const isTodayCell = isToday(day);
             const isSelected  = isSameDay(day, selectedDate) && !isTodayCell;
             const dow         = day.getDay();
+            const holidayName = holidays.get(format(day, 'yyyy-MM-dd'));
+            const isHoliday   = !!holidayName;
             return (
               <button
                 key={i}
@@ -146,16 +151,26 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
               >
                 <span className={clsx(
                   'text-[10px] font-medium',
-                  dow === 0 ? 'text-red-500' : dow === 6 ? 'text-[#378ADD]' : 'text-slate-400 dark:text-slate-500',
+                  (dow === 0 || isHoliday) ? 'text-red-500' : dow === 6 ? 'text-[#378ADD]' : 'text-slate-400 dark:text-slate-500',
                 )}>
                   {['일','월','화','수','목','금','토'][dow]}
                 </span>
                 <span className={clsx(
                   'w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold tabular-nums mt-0.5',
-                  isTodayCell ? 'bg-[#185FA5] text-white' : 'text-slate-700 dark:text-slate-200',
+                  isTodayCell
+                    ? 'bg-[#185FA5] text-white'
+                    : isHoliday
+                      ? 'text-red-500 dark:text-red-400'
+                      : 'text-slate-700 dark:text-slate-200',
                 )}>
                   {day.getDate()}
                 </span>
+                {/* 공휴일명 */}
+                {holidayName && (
+                  <span className="text-[7px] leading-tight text-red-500 dark:text-red-400 truncate w-full text-center px-0.5 mt-0.5">
+                    {holidayName}
+                  </span>
+                )}
               </button>
             );
           })}

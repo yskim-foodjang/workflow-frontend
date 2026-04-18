@@ -14,13 +14,14 @@ interface Props {
   selectedDate: Date;
   displayMonth: Date;
   agendas: Agenda[];
+  holidays: Map<string, string>;
   onMonthChange: (d: Date) => void;
   onSwitchToDaily: (d: Date) => void;
 }
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
-export default function DashboardTab({ selectedDate, displayMonth, agendas, onMonthChange, onSwitchToDaily }: Props) {
+export default function DashboardTab({ selectedDate, displayMonth, agendas, holidays, onMonthChange, onSwitchToDaily }: Props) {
   const navigate = useNavigate();
   const year  = displayMonth.getFullYear();
   const month = displayMonth.getMonth();
@@ -114,6 +115,8 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, onMo
                   const shown          = total >= 7 ? colors.slice(0, 5) : colors.slice(0, 6);
                   const extra          = total >= 7 ? total - 5 : 0;
                   const dow            = day.getDay();
+                  const holidayName    = holidays.get(format(day, 'yyyy-MM-dd'));
+                  const isHoliday      = !!holidayName;
                   return (
                     <button
                       key={idx}
@@ -129,7 +132,7 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, onMo
                           'w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium tabular-nums',
                           isTodayCell
                             ? 'bg-[#185FA5] text-white'
-                            : dow === 0
+                            : (dow === 0 || isHoliday)
                               ? 'text-red-500 dark:text-red-400'
                               : dow === 6
                                 ? 'text-[#378ADD]'
@@ -138,6 +141,12 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, onMo
                       >
                         {day.getDate()}
                       </div>
+                      {/* 공휴일명 */}
+                      {holidayName && (
+                        <span className="text-[7px] leading-tight text-red-500 dark:text-red-400 truncate w-full text-center px-0.5 mt-[1px]">
+                          {holidayName}
+                        </span>
+                      )}
                       {total > 0 && (
                         <div className="grid grid-cols-3 gap-[1px] mt-[2px]">
                           {shown.map((color, i) => (

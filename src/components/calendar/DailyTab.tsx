@@ -2,6 +2,7 @@ import { useMemo, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, isSameDay, addDays, startOfDay, endOfDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
+
 import clsx from 'clsx';
 import type { Agenda } from '@/types';
 import {
@@ -12,6 +13,7 @@ import {
 interface Props {
   selectedDate: Date;
   agendas: Agenda[];
+  holidays: Map<string, string>;
   onDateSelect: (d: Date) => void;
 }
 
@@ -20,7 +22,7 @@ const HOUR_H = 52;
 const GRID_START = 8;
 const GRID_END = 19;
 
-export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props) {
+export default function DailyTab({ selectedDate, agendas, holidays, onDateSelect }: Props) {
   const navigate = useNavigate();
   const [now, setNow] = useState(new Date());
   const gridRef = useRef<HTMLDivElement>(null);
@@ -93,6 +95,12 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
           <span className="text-sm font-semibold text-slate-900 dark:text-white">
             {format(selectedDate, 'M월 d일 EEE', { locale: ko })}
           </span>
+          {/* 공휴일 배지 */}
+          {holidays.get(format(selectedDate, 'yyyy-MM-dd')) && (
+            <span className="text-xs px-2 py-1 rounded-md bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 font-medium">
+              {holidays.get(format(selectedDate, 'yyyy-MM-dd'))}
+            </span>
+          )}
           {isSelectedToday && (
             <span className="text-xs px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium">
               오늘
@@ -125,6 +133,8 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
             const isSelected  = isSameDay(day, selectedDate) && !isTodayCell;
             const dotColor    = weekDotColors[i];
             const dow         = day.getDay();
+            const holidayName = holidays.get(format(day, 'yyyy-MM-dd'));
+            const isHoliday   = !!holidayName;
             return (
               <button
                 key={i}
@@ -138,18 +148,26 @@ export default function DailyTab({ selectedDate, agendas, onDateSelect }: Props)
               >
                 <span className={clsx(
                   'text-[10px] font-medium',
-                  dow === 0 ? 'text-red-500' : dow === 6 ? 'text-[#378ADD]' : 'text-slate-400 dark:text-slate-500',
+                  (dow === 0 || isHoliday) ? 'text-red-500' : dow === 6 ? 'text-[#378ADD]' : 'text-slate-400 dark:text-slate-500',
                 )}>
                   {['일','월','화','수','목','금','토'][dow]}
                 </span>
                 <span className={clsx(
                   'w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold tabular-nums mt-0.5',
-                  isTodayCell ? 'bg-[#185FA5] text-white' : 'text-slate-700 dark:text-slate-200',
+                  isTodayCell
+                    ? 'bg-[#185FA5] text-white'
+                    : isHoliday
+                      ? 'text-red-500 dark:text-red-400'
+                      : 'text-slate-700 dark:text-slate-200',
                 )}>
                   {day.getDate()}
                 </span>
-                <div className="h-1.5 mt-0.5">
-                  {dotColor && (
+                {/* 공휴일 점 or 일정 점 */}
+                <div className="h-1.5 mt-0.5 flex items-center gap-[2px]">
+                  {isHoliday && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-400 dark:bg-red-500" />
+                  )}
+                  {!isHoliday && dotColor && (
                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: dotColor }} />
                   )}
                 </div>

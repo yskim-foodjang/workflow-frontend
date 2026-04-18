@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import api from '@/utils/api';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Agenda, ApiResponse } from '@/types';
+import { useHolidaysMap } from '@/hooks/useHolidays';
 import DashboardTab from './DashboardTab';
 import WeeklyTab from './WeeklyTab';
 import DailyTab from './DailyTab';
@@ -36,6 +37,12 @@ export default function CalendarView() {
     const we = endOfWeek(selectedDate,   { weekStartsOn: 0 });
     return { start: ws.toISOString(), end: we.toISOString() };
   }, [activeTab, selectedDate, displayMonth]);
+
+  // 공휴일 — displayMonth 와 selectedDate 두 달을 모두 커버 (주 경계 대응)
+  const holidays = useHolidaysMap(
+    displayMonth.getFullYear(), displayMonth.getMonth() + 1,
+    selectedDate.getFullYear(), selectedDate.getMonth() + 1,
+  );
 
   const { data: agendas = [] } = useQuery({
     queryKey: queryKeys.agendas.calendar(fetchRange.start, fetchRange.end),
@@ -94,6 +101,7 @@ export default function CalendarView() {
           selectedDate={selectedDate}
           displayMonth={displayMonth}
           agendas={agendas}
+          holidays={holidays}
           onMonthChange={setDisplayMonth}
           onSwitchToDaily={handleSwitchToDaily}
         />
@@ -102,6 +110,7 @@ export default function CalendarView() {
         <WeeklyTab
           selectedDate={selectedDate}
           agendas={agendas}
+          holidays={holidays}
           onDateSelect={handleDateSelect}
           onSwitchToDaily={handleSwitchToDaily}
         />
@@ -110,6 +119,7 @@ export default function CalendarView() {
         <DailyTab
           selectedDate={selectedDate}
           agendas={agendas}
+          holidays={holidays}
           onDateSelect={handleDateSelect}
         />
       )}
