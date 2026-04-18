@@ -161,49 +161,64 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
           })}
         </div>
 
-        {/* Gantt area (AGENDA + 다일 SCHEDULE) */}
+        {/* Gantt area (AGENDA만) — 날짜 구분선 포함 */}
         {weekGanttItems.length > 0 && (
-          <div className="border-b border-slate-100 dark:border-slate-700 px-2 py-1.5 space-y-1">
-            {weekGanttItems.map(a => {
-              const color  = getColor(a);
-              const aStart = new Date(a.startAt);
-              const aEnd   = ganttEnd(a);
-              let firstCol = -1, lastCol = -1;
-              weekDays.forEach((d, i) => {
-                if (aStart <= endOfDay(d) && aEnd >= startOfDay(d)) {
-                  if (firstCol < 0) firstCol = i;
-                  lastCol = i;
-                }
-              });
-              if (firstCol < 0) return null;
-              const span             = lastCol - firstCol + 1;
-              const continuesBefore  = aStart < startOfDay(weekDays[0]);
-              const continuesAfter   = aEnd   > endOfDay(weekDays[6]);
-              const isDeadlineInWeek = a.category === 'AGENDA' && a.deadline && weekDays.some(d => isSameDay(new Date(a.deadline!), d));
-              return (
-                <div key={a.id} className="relative h-6">
-                  <button
-                    onClick={() => navigate(`/agendas/${a.id}`)}
-                    className="absolute h-5 top-0.5 flex items-center gap-0.5 px-1.5 text-[10px] font-medium text-white overflow-hidden"
-                    style={{
-                      left:  `${firstCol * (100 / 7)}%`,
-                      width: `${span * (100 / 7)}%`,
-                      backgroundColor: color,
-                      borderRadius: `${continuesBefore ? 0 : 3}px ${continuesAfter ? 0 : 3}px ${continuesAfter ? 0 : 3}px ${continuesBefore ? 0 : 3}px`,
-                    }}
-                  >
-                    {continuesBefore && <span className="flex-shrink-0">←</span>}
-                    <span className="truncate flex-1">{a.title}</span>
-                    {isDeadlineInWeek && a.deadline && (
-                      <span className="ml-1 text-[8px] bg-white/25 px-0.5 rounded flex-shrink-0">
-                        {getAmPm(a.deadline)}마감
-                      </span>
-                    )}
-                    {continuesAfter && <span className="flex-shrink-0">→</span>}
-                  </button>
-                </div>
-              );
-            })}
+          <div className="border-b border-slate-100 dark:border-slate-700 py-1.5">
+            {/* 날짜 구분선 배경 (7컬럼 그리드) */}
+            <div className="relative">
+              {/* 세로 구분선 */}
+              <div className="absolute inset-0 grid grid-cols-7 pointer-events-none">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={i > 0 ? 'border-l border-slate-100 dark:border-slate-700/50' : ''}
+                  />
+                ))}
+              </div>
+              {/* 간트 바 */}
+              <div className="space-y-1 px-0">
+                {weekGanttItems.map(a => {
+                  const color  = getColor(a);
+                  const aStart = new Date(a.startAt);
+                  const aEnd   = ganttEnd(a);
+                  let firstCol = -1, lastCol = -1;
+                  weekDays.forEach((d, i) => {
+                    if (aStart <= endOfDay(d) && aEnd >= startOfDay(d)) {
+                      if (firstCol < 0) firstCol = i;
+                      lastCol = i;
+                    }
+                  });
+                  if (firstCol < 0) return null;
+                  const span             = lastCol - firstCol + 1;
+                  const continuesBefore  = aStart < startOfDay(weekDays[0]);
+                  const continuesAfter   = aEnd   > endOfDay(weekDays[6]);
+                  const isDeadlineInWeek = a.category === 'AGENDA' && a.deadline && weekDays.some(d => isSameDay(new Date(a.deadline!), d));
+                  return (
+                    <div key={a.id} className="relative h-6">
+                      <button
+                        onClick={() => navigate(`/agendas/${a.id}`)}
+                        className="absolute h-5 top-0.5 flex items-center gap-0.5 px-1.5 text-[10px] font-medium text-white overflow-hidden"
+                        style={{
+                          left:  `${firstCol * (100 / 7)}%`,
+                          width: `${span * (100 / 7)}%`,
+                          backgroundColor: color,
+                          borderRadius: `${continuesBefore ? 0 : 3}px ${continuesAfter ? 0 : 3}px ${continuesAfter ? 0 : 3}px ${continuesBefore ? 0 : 3}px`,
+                        }}
+                      >
+                        {continuesBefore && <span className="flex-shrink-0">←</span>}
+                        <span className="truncate flex-1">{a.title}</span>
+                        {isDeadlineInWeek && a.deadline && (
+                          <span className="ml-1 text-[8px] bg-white/25 px-0.5 rounded flex-shrink-0">
+                            {getAmPm(a.deadline)}마감
+                          </span>
+                        )}
+                        {continuesAfter && <span className="flex-shrink-0">→</span>}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
