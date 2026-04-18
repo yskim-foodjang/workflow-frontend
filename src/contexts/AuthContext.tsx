@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import api from '@/utils/api';
-import { getAccessToken, getRefreshToken, setTokens, clearTokens, isTokenPersisted } from '@/utils/tokenStorage';
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/utils/tokenStorage';
 import type { User, LoginResponse, ApiResponse } from '@/types';
 
 interface AuthContextType {
@@ -48,19 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
-  // 토큰 재발급 + 유저 상태 최신화 (역할·프로필 변경 후 호출)
+  // DB에서 최신 유저 정보 다시 조회 (프로필·역할 변경 승인 후 호출)
   const refreshSession = useCallback(async () => {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) return;
-    try {
-      const { data } = await api.post<ApiResponse<LoginResponse>>('/auth/refresh', { refreshToken });
-      const { accessToken, refreshToken: newRefresh, user: userData } = data.data;
-      setTokens(accessToken, newRefresh, isTokenPersisted());
-      setUser(userData);
-    } catch {
-      // refresh 실패 시 그냥 fetchUser로 fallback
-      await fetchUser();
-    }
+    await fetchUser();
   }, [fetchUser]);
 
   const logout = async () => {
