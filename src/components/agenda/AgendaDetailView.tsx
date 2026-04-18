@@ -21,14 +21,18 @@ export default function AgendaDetailView({ agenda, deadlineDaysLeft }: AgendaDet
         <div>
           <dt className="text-slate-500 dark:text-slate-400 mb-1">시작</dt>
           <dd className="text-slate-900 dark:text-white font-medium">
-            {format(new Date(agenda.startAt), 'yyyy.M.d (EEE) a h:mm', { locale: ko })}
+            {agenda.category === 'AGENDA'
+              ? format(new Date(agenda.startAt), 'yyyy.M.d (EEE) a', { locale: ko })
+              : format(new Date(agenda.startAt), 'yyyy.M.d (EEE) a h:mm', { locale: ko })}
           </dd>
         </div>
         {agenda.endAt && (
           <div>
             <dt className="text-slate-500 dark:text-slate-400 mb-1">종료</dt>
             <dd className="text-slate-900 dark:text-white font-medium">
-              {format(new Date(agenda.endAt), 'yyyy.M.d (EEE) a h:mm', { locale: ko })}
+              {agenda.category === 'AGENDA'
+                ? format(new Date(agenda.endAt), 'yyyy.M.d (EEE) a', { locale: ko })
+                : format(new Date(agenda.endAt), 'yyyy.M.d (EEE) a h:mm', { locale: ko })}
             </dd>
           </div>
         )}
@@ -40,7 +44,7 @@ export default function AgendaDetailView({ agenda, deadlineDaysLeft }: AgendaDet
               'text-amber-600': deadlineDaysLeft !== null && deadlineDaysLeft > 0 && deadlineDaysLeft <= 3,
               'text-slate-900 dark:text-white': deadlineDaysLeft === null || deadlineDaysLeft > 3,
             })}>
-              {format(new Date(agenda.deadline), 'yyyy.M.d (EEE) a h:mm', { locale: ko })}
+              {format(new Date(agenda.deadline), 'yyyy.M.d (EEE) a', { locale: ko })}
               {deadlineDaysLeft !== null && (
                 <span className="ml-2 text-xs">
                   {deadlineDaysLeft <= 0 ? '(기한 초과)' : `(D-${deadlineDaysLeft})`}
