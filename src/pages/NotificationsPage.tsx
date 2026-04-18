@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { usePushNotification } from '@/hooks/usePushNotification';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
-import { Card, Badge, PageHeader, EmptyState, SkeletonList } from '@/components/ui';
+import { Card, Badge, PageHeader, EmptyState, SkeletonList, Modal } from '@/components/ui';
 
 const NOTIFICATION_ICONS: Record<string, string> = {
   PARTICIPANT_ADDED: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
@@ -25,6 +26,18 @@ export default function NotificationsPage() {
   const { notifications, unreadCount, isLoading, hasMore, loadMore, markAsRead, markAllAsRead } = useNotifications();
   const { status: pushStatus, isLoading: pushLoading, subscribe, unsubscribe } = usePushNotification();
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handlePushToggle = () => {
+    if (pushLoading || pushStatus === 'denied' || pushStatus === 'unsupported') return;
+    setConfirmOpen(true);
+  };
+
+  const handlePushConfirm = () => {
+    setConfirmOpen(false);
+    if (pushStatus === 'subscribed') unsubscribe();
+    else subscribe();
+  };
 
   const handleClick = (notification: typeof notifications[0]) => {
     if (!notification.isRead) markAsRead(notification.id);
@@ -36,7 +49,7 @@ export default function NotificationsPage() {
       {/* 핸드폰 알림 토글 — 상단 독립 배치 */}
       <div className="flex justify-end mb-2">
         <button
-          onClick={pushStatus === 'subscribed' ? unsubscribe : subscribe}
+          onClick={handlePushToggle}
           disabled={pushLoading || pushStatus === 'denied' || pushStatus === 'unsupported'}
           className={clsx(
             'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors',
@@ -127,6 +140,38 @@ export default function NotificationsPage() {
           )}
         </div>
       )}
+      {/* 푸시 알림 켜기/끄기 확인 모달 */}
+      <Modal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title={pushStatus === 'subscribed' ? '알림 끄기' : '알림 켜기'}
+        size="sm"
+      >
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">
+          {pushStatus === 'subscribed'
+            ? '핸드폰 알림을 끄시겠습니까? 알림을 받지 못할 수 있습니다.'
+            : '핸드폰 알림을 켜시겠습니까? 새로운 알림을 실시간으로 받을 수 있습니다.'}
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setConfirmOpen(false)}
+            className="px-4 py-2 text-sm rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={handlePushConfirm}
+            className={clsx(
+              'px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors',
+              pushStatus === 'subscribed'
+                ? 'bg-rose-500 hover:bg-rose-600'
+                : 'bg-primary-600 hover:bg-primary-700'
+            )}
+          >
+            {pushStatus === 'subscribed' ? '끄기' : '켜기'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
