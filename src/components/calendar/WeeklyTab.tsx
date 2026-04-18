@@ -7,7 +7,7 @@ import {
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
 import type { Agenda } from '@/types';
-import { getColor, formatHHMM, getWeekDays, getAmPm, TYPE_ACCENT, isMultiDaySchedule } from './calendarUtils';
+import { getColor, formatHHMM, getWeekDays, getAmPm, TYPE_ACCENT } from './calendarUtils';
 
 interface Props {
   selectedDate: Date;
