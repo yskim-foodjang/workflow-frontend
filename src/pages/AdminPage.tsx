@@ -64,6 +64,8 @@ interface AdminUser {
   phone: string | null;
   role: string;
   status: string;
+  isActive: boolean;
+  createdAt: string;
   department: { name: string } | null;
   team: { name: string } | null;
 }
@@ -167,12 +169,22 @@ export function AdminUsers() {
     try {
       await api.patch(`/admin/users/${deleteTarget.id}/deactivate`);
       toast.success(`${deleteTarget.name}님이 비활성화되었습니다.`);
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      setUsers((prev) => prev.map((u) => u.id === deleteTarget.id ? { ...u, isActive: false } : u));
       setDeleteTarget(null);
     } catch {
       toast.error('처리에 실패했습니다.');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleActivate = async (user: AdminUser) => {
+    try {
+      await api.patch(`/admin/users/${user.id}/activate`);
+      toast.success(`${user.name}님이 활성화되었습니다.`);
+      setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, isActive: true } : u));
+    } catch {
+      toast.error('처리에 실패했습니다.');
     }
   };
 
@@ -260,23 +272,46 @@ export function AdminUsers() {
           <p className="text-center text-slate-400 py-10">등록된 사용자가 없습니다.</p>
         ) : (
           <div className="space-y-3">
-            {users.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 gap-3">
+            {[...users].sort((a, b) => {
+              // 활성 > 비활성
+              if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+              // 역할 순서: ADMIN > SUB_ADMIN > MEMBER
+              const roleOrder: Record<string, number> = { ADMIN: 0, SUB_ADMIN: 1, MEMBER: 2 };
+              const ro = (roleOrder[a.role] ?? 2) - (roleOrder[b.role] ?? 2);
+              if (ro !== 0) return ro;
+              // 같은 역할 내 가입순
+              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            }).map((user) => (
+              <div key={user.id} className={clsx(
+                'flex items-center justify-between p-4 rounded-xl border gap-3',
+                user.isActive
+                  ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                  : 'bg-slate-100/60 dark:bg-slate-800/20 border-slate-200/60 dark:border-slate-700/40 opacity-60'
+              )}>
                 {/* 프로필 요약 — 클릭 시 상세 모달 */}
                 <button
                   onClick={() => setViewTarget(user)}
                   className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-slate-900 dark:text-white">{user.name}</span>
-                    {ROLE_BADGE[user.role] && (
+                    <span className={clsx('font-medium', user.isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500')}>
+                      {user.name}
+                    </span>
+                    {ROLE_BADGE[user.role] && user.isActive && (
                       <span className={clsx('text-xs px-2 py-0.5 rounded-full', ROLE_BADGE[user.role])}>
                         {ROLE_LABEL[user.role]}
                       </span>
                     )}
-                    <span className={clsx('text-xs font-medium', STATUS_COLOR[user.status] ?? 'text-slate-400')}>
-                      {STATUS_LABEL[user.status] ?? user.status}
-                    </span>
+                    {!user.isActive && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                        비활성
+                      </span>
+                    )}
+                    {user.isActive && (
+                      <span className={clsx('text-xs font-medium', STATUS_COLOR[user.status] ?? 'text-slate-400')}>
+                        {STATUS_LABEL[user.status] ?? user.status}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{user.email}</p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
@@ -285,31 +320,40 @@ export function AdminUsers() {
                 </button>
                 {/* 액션 버튼들 */}
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  <button
-                    onClick={() => { setResetTarget(user); setNewPassword(''); }}
-                    className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
-                  >
-                    비밀번호 초기화
-                  </button>
-                  {isMainAdmin && user.role !== 'ADMIN' && (
-                    <button
-                      onClick={() => setRoleTarget(user)}
-                      className={clsx(
-                        'px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border transition-colors',
-                        user.role === 'SUB_ADMIN'
-                          ? 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400'
-                          : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400'
+                  {user.isActive ? (
+                    <>
+                      {/* 서브관리자는 메인관리자 비밀번호 초기화 불가 */}
+                      {!(user.role === 'ADMIN' && !isMainAdmin) && (
+                        <button
+                          onClick={() => { setResetTarget(user); setNewPassword(''); }}
+                          className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+                        >
+                          비밀번호 초기화
+                        </button>
                       )}
-                    >
-                      {user.role === 'SUB_ADMIN' ? '서브관리자 해제' : '서브관리자 임명'}
-                    </button>
-                  )}
-                  {user.role !== 'ADMIN' && (
+                      {isMainAdmin && user.role !== 'ADMIN' && (
+                        <button
+                          onClick={() => setRoleTarget(user)}
+                          className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                        >
+                          {user.role === 'SUB_ADMIN' ? '서브관리자 해제' : '서브관리자 임명'}
+                        </button>
+                      )}
+                      {user.role !== 'ADMIN' && (
+                        <button
+                          onClick={() => setDeleteTarget(user)}
+                          className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                        >
+                          비활성화
+                        </button>
+                      )}
+                    </>
+                  ) : (
                     <button
-                      onClick={() => setDeleteTarget(user)}
-                      className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      onClick={() => handleActivate(user)}
+                      className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                     >
-                      비활성화
+                      활성화
                     </button>
                   )}
                 </div>
