@@ -161,12 +161,14 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
           })}
         </div>
 
-        {/* Gantt area (AGENDA만) — 날짜 구분선 포함 */}
+        {/* Gantt area (AGENDA만) — 시간 그리드와 동일한 32px 오프셋으로 날짜 구분선 정렬 */}
         {weekGanttItems.length > 0 && (
-          <div className="border-b border-slate-100 dark:border-slate-700 py-1.5">
-            {/* 날짜 구분선 배경 (7컬럼 그리드) */}
-            <div className="relative">
-              {/* 세로 구분선 */}
+          <div className="border-b border-slate-100 dark:border-slate-700 py-1.5 flex">
+            {/* 시간 레이블 컬럼과 동일한 너비 오프셋 */}
+            <div className="w-8 flex-shrink-0" />
+            {/* 7컬럼 구분선 + 간트 바 영역 */}
+            <div className="flex-1 relative">
+              {/* 세로 구분선 — 시간 그리드 컬럼과 1:1 정렬 */}
               <div className="absolute inset-0 grid grid-cols-7 pointer-events-none">
                 {Array.from({ length: 7 }).map((_, i) => (
                   <div
@@ -176,7 +178,7 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                 ))}
               </div>
               {/* 간트 바 */}
-              <div className="space-y-1 px-0">
+              <div className="space-y-1">
                 {weekGanttItems.map(a => {
                   const color  = getColor(a);
                   const aStart = new Date(a.startAt);
