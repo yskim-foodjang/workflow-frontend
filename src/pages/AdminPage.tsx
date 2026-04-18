@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { PageHeader, Card } from '@/components/ui';
@@ -67,6 +67,24 @@ interface AdminUser {
   team: { name: string } | null;
 }
 
+interface ProfileChangeRequest {
+  id: string;
+  requestedName: string | null;
+  requestedPosition: string | null;
+  requestedPhone: string | null;
+  status: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    position: string | null;
+    phone: string | null;
+    department: { name: string } | null;
+    team: { name: string } | null;
+  };
+}
+
 const ROLE_LABEL: Record<string, string> = { ADMIN: '관리자', USER: '일반' };
 const STATUS_LABEL: Record<string, string> = { ACTIVE: '활성', INACTIVE: '비활성', PENDING: '대기' };
 const STATUS_COLOR: Record<string, string> = {
@@ -83,13 +101,40 @@ export function AdminUsers() {
   const [viewTarget, setViewTarget] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [profileRequests, setProfileRequests] = useState<ProfileChangeRequest[]>([]);
+  const [profileReqProcessing, setProfileReqProcessing] = useState<string | null>(null);
+
+  const fetchProfileRequests = useCallback(() => {
+    api.get('/admin/profile-requests')
+      .then(({ data }) => setProfileRequests(data.data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     api.get('/admin/users')
       .then(({ data }) => setUsers(data.data))
       .catch(() => toast.error('목록을 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
-  }, []);
+    fetchProfileRequests();
+  }, [fetchProfileRequests]);
+
+  const handleProfileRequestAction = async (id: string, action: 'approve' | 'reject') => {
+    setProfileReqProcessing(id + action);
+    try {
+      await api.patch(`/admin/profile-requests/${id}/${action}`);
+      toast.success(action === 'approve' ? '프로필 변경이 승인되었습니다.' : '프로필 변경이 거절되었습니다.');
+      setProfileRequests(prev => prev.filter(r => r.id !== id));
+      if (action === 'approve') {
+        // 사용자 목록 갱신
+        const { data } = await api.get('/admin/users');
+        setUsers(data.data);
+      }
+    } catch {
+      toast.error('처리에 실패했습니다.');
+    } finally {
+      setProfileReqProcessing(null);
+    }
+  };
 
   const handleReset = async () => {
     if (!resetTarget) return;
@@ -111,12 +156,12 @@ export function AdminUsers() {
     if (!deleteTarget) return;
     setProcessing(true);
     try {
-      await api.delete(`/admin/users/${deleteTarget.id}`);
-      toast.success(`${deleteTarget.name}님이 삭제되었습니다.`);
+      await api.patch(`/admin/users/${deleteTarget.id}/deactivate`);
+      toast.success(`${deleteTarget.name}님이 비활성화되었습니다.`);
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch {
-      toast.error('삭제에 실패했습니다.');
+      toast.error('처리에 실패했습니다.');
     } finally {
       setProcessing(false);
     }
@@ -126,6 +171,57 @@ export function AdminUsers() {
 
   return (
     <>
+      {/* 프로필 변경 요청 */}
+      {profileRequests.length > 0 && (
+        <Card className="mb-4">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            프로필 변경 요청
+            <span className="text-xs font-normal bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{profileRequests.length}건</span>
+          </h2>
+          <div className="space-y-3">
+            {profileRequests.map((req) => (
+              <div key={req.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-medium text-slate-900 dark:text-white">{req.user.name}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500">{req.user.email}</span>
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                      {req.requestedName && (
+                        <p><span className="text-slate-400">이름:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.name}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedName}</span></p>
+                      )}
+                      {req.requestedPosition !== null && (
+                        <p><span className="text-slate-400">직책:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.position ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedPosition || '-'}</span></p>
+                      )}
+                      {req.requestedPhone !== null && (
+                        <p><span className="text-slate-400">연락처:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.phone ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedPhone || '-'}</span></p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => handleProfileRequestAction(req.id, 'approve')}
+                      disabled={profileReqProcessing !== null}
+                      className="px-3 py-1 text-xs font-medium rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 transition-colors"
+                    >
+                      {profileReqProcessing === req.id + 'approve' ? '...' : '승인'}
+                    </button>
+                    <button
+                      onClick={() => handleProfileRequestAction(req.id, 'reject')}
+                      disabled={profileReqProcessing !== null}
+                      className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
+                    >
+                      {profileReqProcessing === req.id + 'reject' ? '...' : '거절'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card>
         <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">
           사용자 목록
@@ -164,12 +260,14 @@ export function AdminUsers() {
                   >
                     비밀번호 초기화
                   </button>
-                  <button
-                    onClick={() => setDeleteTarget(user)}
-                    className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                  >
-                    삭제
-                  </button>
+                  {user.role !== 'ADMIN' && (
+                    <button
+                      onClick={() => setDeleteTarget(user)}
+                      className="px-3 py-1 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    >
+                      비활성화
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -259,15 +357,15 @@ export function AdminUsers() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">사용자 삭제</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">사용자 비활성화</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-              <strong className="text-slate-900 dark:text-white">{deleteTarget.name}</strong>님을 삭제하시겠습니까?<br />
-              <span className="text-rose-500 dark:text-rose-400 text-xs mt-1 block">이 작업은 되돌릴 수 없습니다.</span>
+              <strong className="text-slate-900 dark:text-white">{deleteTarget.name}</strong>님을 비활성화 하시겠습니까?<br />
+              <span className="text-slate-400 dark:text-slate-500 text-xs mt-1 block">비활성화된 사용자는 로그인이 불가합니다.</span>
             </p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300">취소</button>
               <button onClick={handleDelete} disabled={processing} className="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium disabled:opacity-50 transition-colors">
-                {processing ? '처리 중...' : '삭제'}
+                {processing ? '처리 중...' : '비활성화'}
               </button>
             </div>
           </div>
