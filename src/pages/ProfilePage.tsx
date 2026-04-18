@@ -34,6 +34,14 @@ export default function ProfilePage() {
       .finally(() => setRequestLoading(false));
   }, []);
 
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    if (digits.length <= 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+  };
+
   const handleEditSubmit = async () => {
     const payload: Record<string, string> = {};
     if (editForm.name.trim()) payload.name = editForm.name.trim();
@@ -205,9 +213,10 @@ export default function ProfilePage() {
               <input
                 type="text"
                 value={editForm.phone}
-                onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) => setEditForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))}
                 className="input-field"
                 placeholder="변경할 연락처 (비워두면 유지)"
+                maxLength={13}
               />
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">

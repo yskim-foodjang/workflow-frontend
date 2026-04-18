@@ -19,7 +19,7 @@ export default function Layout() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const allNav = user?.role === 'ADMIN' ? [...navItems, ...adminNavItems] : navItems;
+  const allNav = (user?.role === 'ADMIN' || user?.role === 'SUB_ADMIN') ? [...navItems, ...adminNavItems] : navItems;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
