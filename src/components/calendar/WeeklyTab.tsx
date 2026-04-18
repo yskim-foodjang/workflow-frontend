@@ -2,14 +2,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   format, isSameDay, isToday, addWeeks,
-  startOfDay, endOfDay, getISOWeek, startOfWeek,
+  startOfDay, endOfDay, getISOWeek, getWeekOfMonth, startOfWeek,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
 import type { Agenda } from '@/types';
 import { getColor, formatHHMM, getWeekDays, getAmPm, TYPE_ACCENT } from './calendarUtils';
-
-
 
 interface Props {
   selectedDate: Date;
@@ -67,10 +65,13 @@ export default function WeeklyTab({ selectedDate, agendas, holidays, onDateSelec
     });
   }, [agendas, weekDays]);
 
-  const weekLabel = useMemo(() => {
-    const wn = getISOWeek(weekDays[0]);
-    return `${format(weekDays[0], 'M월', { locale: ko })} ${wn}주`;
-  }, [weekDays]);
+  // 월 내 주차 (1주차~5주차) — 선택 날짜 기준, 일요일 주 시작
+  const weekOfMonth = useMemo(
+    () => getWeekOfMonth(selectedDate, { weekStartsOn: 0 }),
+    [selectedDate],
+  );
+  // 연간 ISO 주차 (17주 등)
+  const isoWeekNum = useMemo(() => getISOWeek(selectedDate), [selectedDate]);
 
   const nowH         = now.getHours();
   const nowTop       = (nowH - GRID_START) * HOUR_H + (now.getMinutes() / 60) * HOUR_H;
@@ -104,7 +105,12 @@ export default function WeeklyTab({ selectedDate, agendas, holidays, onDateSelec
           </svg>
         </button>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900 dark:text-white">{weekLabel}</span>
+          <span className="text-sm font-semibold text-slate-900 dark:text-white">
+            {format(selectedDate, 'M월', { locale: ko })} {weekOfMonth}주차
+          </span>
+          <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+            ({isoWeekNum}주)
+          </span>
           {isThisWeek && (
             <span className="text-xs px-2 py-1 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium">
               이번 주

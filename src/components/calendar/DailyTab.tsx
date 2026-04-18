@@ -93,7 +93,7 @@ export default function DailyTab({ selectedDate, agendas, holidays, onDateSelect
         </button>
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-slate-900 dark:text-white">
-            {format(selectedDate, 'M월 d일 EEE', { locale: ko })}
+            {format(selectedDate, 'M월 d일', { locale: ko })}({format(selectedDate, 'EEE', { locale: ko })})
           </span>
           {/* 공휴일 배지 */}
           {holidays.get(format(selectedDate, 'yyyy-MM-dd')) && (
