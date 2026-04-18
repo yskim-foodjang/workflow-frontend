@@ -2,13 +2,22 @@ import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, CATEGORY_LABELS, CATEGORY_BG } from '@/utils/constants';
-import { format } from 'date-fns';
+import { format, differenceInCalendarDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import clsx from 'clsx';
 import { Card, Badge, AvatarGroup } from '@/components/ui';
 import { queryKeys } from '@/lib/queryKeys';
 import api from '@/utils/api';
 import type { Agenda, ApiResponse } from '@/types';
+
+/** 마감일 기준 D-day 레이블 + 색상 클래스 반환 */
+function getDdayInfo(deadline: string, isCompleted: boolean) {
+  if (isCompleted) return null;
+  const diff = differenceInCalendarDays(new Date(deadline), new Date());
+  if (diff > 0)  return { label: `D-${diff}`,  color: diff <= 3 ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400' };
+  if (diff === 0) return { label: 'D-0',        color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+  return           { label: '기한초과',          color: 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 dark:text-rose-400' };
+}
 
 interface AgendaCardProps {
   agenda: Agenda;
@@ -17,6 +26,7 @@ interface AgendaCardProps {
 export default function AgendaCard({ agenda }: AgendaCardProps) {
   const queryClient = useQueryClient();
   const deadlineMs = agenda.deadline ? new Date(agenda.deadline).getTime() - Date.now() : null;
+  const ddayInfo = agenda.deadline ? getDdayInfo(agenda.deadline, agenda.isCompleted) : null;
 
   // 카드에 마우스를 올리면 상세 데이터를 미리 prefetch
   const handleMouseEnter = useCallback(() => {
@@ -57,15 +67,22 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
               <span>{format(new Date(agenda.startAt), 'M/d (EEE)', { locale: ko })}</span>
             )}
             {agenda.deadline && (
-              <span className={clsx('font-medium', {
-                'text-rose-500':  deadlineMs !== null && deadlineMs < 24 * 60 * 60 * 1000,
-                'text-amber-500': deadlineMs !== null && deadlineMs >= 24 * 60 * 60 * 1000 && deadlineMs < 3 * 24 * 60 * 60 * 1000,
-              })}>
-                {(() => {
-                  const d = new Date(agenda.deadline);
-                  const ampm = d.getHours() < 12 ? '오전' : '오후';
-                  return `마감: ${format(d, 'M/d')} (${ampm})`;
-                })()}
+              <span className="flex items-center gap-1.5">
+                <span className={clsx('font-medium', {
+                  'text-rose-500':  deadlineMs !== null && deadlineMs < 24 * 60 * 60 * 1000,
+                  'text-amber-500': deadlineMs !== null && deadlineMs >= 24 * 60 * 60 * 1000 && deadlineMs < 3 * 24 * 60 * 60 * 1000,
+                })}>
+                  {(() => {
+                    const d = new Date(agenda.deadline);
+                    const ampm = d.getHours() < 12 ? '오전' : '오후';
+                    return `마감: ${format(d, 'M/d')} (${ampm})`;
+                  })()}
+                </span>
+                {ddayInfo && (
+                  <span className={clsx('text-[11px] font-semibold px-1.5 py-0.5 rounded-md', ddayInfo.color)}>
+                    {ddayInfo.label}
+                  </span>
+                )}
               </span>
             )}
             {agenda.participants.length > 0 && (
