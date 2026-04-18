@@ -18,21 +18,11 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           // TanStack Query
           'vendor-query': ['@tanstack/react-query'],
-          // FullCalendar (무거운 라이브러리)
-          'vendor-calendar': [
-            '@fullcalendar/core',
-            '@fullcalendar/react',
-            '@fullcalendar/daygrid',
-            '@fullcalendar/timegrid',
-            '@fullcalendar/list',
-            '@fullcalendar/interaction',
-          ],
           // 유틸리티
           'vendor-utils': ['date-fns', 'clsx', 'axios', 'react-hot-toast'],
         },
       },
     },
-    // 청크 경고 임계치 상향 (FullCalendar 특성상 불가피)
     chunkSizeWarningLimit: 600,
   },
   server: {
