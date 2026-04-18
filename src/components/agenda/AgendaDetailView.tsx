@@ -22,7 +22,7 @@ export default function AgendaDetailView({ agenda, deadlineDaysLeft }: AgendaDet
           <dt className="text-slate-500 dark:text-slate-400 mb-1">시작</dt>
           <dd className="text-slate-900 dark:text-white font-medium">
             {agenda.category === 'AGENDA'
-              ? format(new Date(agenda.startAt), 'yyyy.M.d (EEE) a', { locale: ko })
+              ? format(new Date(agenda.startAt), 'yyyy.M.d (EEE)', { locale: ko })
               : format(new Date(agenda.startAt), 'yyyy.M.d (EEE) a h:mm', { locale: ko })}
           </dd>
         </div>
@@ -31,7 +31,7 @@ export default function AgendaDetailView({ agenda, deadlineDaysLeft }: AgendaDet
             <dt className="text-slate-500 dark:text-slate-400 mb-1">종료</dt>
             <dd className="text-slate-900 dark:text-white font-medium">
               {agenda.category === 'AGENDA'
-                ? format(new Date(agenda.endAt), 'yyyy.M.d (EEE) a', { locale: ko })
+                ? format(new Date(agenda.endAt), 'yyyy.M.d (EEE)', { locale: ko })
                 : format(new Date(agenda.endAt), 'yyyy.M.d (EEE) a h:mm', { locale: ko })}
             </dd>
           </div>
