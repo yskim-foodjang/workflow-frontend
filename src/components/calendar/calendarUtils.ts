@@ -7,8 +7,8 @@ export const TYPE_ACCENT: Record<string, string> = {
   DEADLINE: '#F43F5E',
   TRIP:     '#F59E0B',
   OTHER:    '#8B5CF6',
-  SCHEDULE: '#0D9488',
-  AGENDA:   '#8B5CF6',
+  SCHEDULE: '#0D9488', // teal — AgendaCard bg-teal-500 기준
+  AGENDA:   '#8B5CF6', // violet — AgendaCard bg-violet-400 기준
 };
 
 export const TYPE_LABEL: Record<string, string> = {
@@ -20,8 +20,8 @@ export const TYPE_LABEL: Record<string, string> = {
 };
 
 export function getColor(agenda: Agenda): string {
-  if (agenda.category === 'SCHEDULE') return TYPE_ACCENT.SCHEDULE;
-  return TYPE_ACCENT[agenda.type] ?? TYPE_ACCENT.OTHER;
+  if (agenda.category === 'SCHEDULE') return TYPE_ACCENT.SCHEDULE; // 스케줄 → 고정 teal
+  return TYPE_ACCENT.AGENDA; // 아젠다 → 고정 violet (AgendaCard 좌측 바와 통일)
 }
 
 export function getAmPm(isoDate: string): '오전' | '오후' {

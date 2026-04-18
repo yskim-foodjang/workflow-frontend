@@ -34,13 +34,9 @@ export default function AgendaCard({ agenda }: AgendaCardProps) {
   return (
     <Link to={`/agendas/${agenda.id}`} className="block" onMouseEnter={handleMouseEnter}>
       <Card padding="sm" className="flex gap-3 hover:shadow-md transition-shadow">
-        <div className={clsx('w-1.5 rounded-full flex-shrink-0', agenda.category === 'AGENDA' ? 'bg-violet-400' : {
-          'bg-blue-500':    agenda.type === 'MEETING',
-          'bg-emerald-500': agenda.type === 'TASK',
-          'bg-rose-500':    agenda.type === 'DEADLINE',
-          'bg-amber-500':   agenda.type === 'TRIP',
-          'bg-violet-500':  agenda.type === 'OTHER',
-        })} />
+        <div className={clsx('w-1.5 rounded-full flex-shrink-0',
+          agenda.category === 'AGENDA' ? 'bg-violet-400' : 'bg-teal-500'
+        )} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h3 className={clsx('font-medium truncate', agenda.isCompleted

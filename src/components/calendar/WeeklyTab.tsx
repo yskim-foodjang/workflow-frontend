@@ -261,7 +261,7 @@ export default function WeeklyTab({ selectedDate, agendas, onDateSelect, onSwitc
                       >
                         <div className="px-0.5 py-0.5">
                           <div className="text-[10px] font-semibold tabular-nums leading-tight" style={{ color }}>
-                            {String(sH).padStart(2, '0')}
+                            {`${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`}
                           </div>
                           {height >= 36 && (
                             <div className="text-[9px] truncate leading-tight" style={{ color }}>

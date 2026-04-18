@@ -5,7 +5,7 @@ import { Sidebar, Header, BottomTabBar } from '@/components/layout';
 import { HomeIcon, CalendarIcon, ListIcon, BellIcon, CogIcon } from '@/components/layout/NavIcons';
 
 const navItems = [
-  { to: '/dashboard', label: '대시보드', icon: HomeIcon },
+  { to: '/dashboard', label: '홈', icon: HomeIcon },
   { to: '/calendar', label: '캘린더', icon: CalendarIcon },
   { to: '/agendas', label: '일정 관리', icon: ListIcon },
   { to: '/notifications', label: '알림', icon: BellIcon },
