@@ -300,10 +300,10 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, holi
                   )}
                   {/* 시간 컬럼 — 다일이면 날짜+시간 2줄 */}
                   <div className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500 flex-shrink-0 w-16 text-right leading-snug">
-                    <div>{isMulti ? format(new Date(a.startAt), 'M/d HH:mm', { locale: ko }) : formatHHMM(a.startAt)}</div>
+                    <div>{isMulti ? format(new Date(a.startAt), 'M/d(EEE) HH:mm', { locale: ko }) : formatHHMM(a.startAt)}</div>
                     {a.endAt && (
                       <div className="opacity-70">
-                        {isMulti ? format(new Date(a.endAt), 'M/d HH:mm', { locale: ko }) : formatHHMM(a.endAt)}
+                        {isMulti ? format(new Date(a.endAt), 'M/d(EEE) HH:mm', { locale: ko }) : formatHHMM(a.endAt)}
                       </div>
                     )}
                   </div>
