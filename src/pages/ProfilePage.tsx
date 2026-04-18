@@ -30,13 +30,20 @@ export default function ProfilePage() {
   const [requestLoading, setRequestLoading] = useState(true);
 
   useEffect(() => {
-    // 최신 프로필·역할 반영 (토큰 재발급 포함)
+    // 최신 프로필 반영
     refreshSession();
     api.get('/users/me/profile-request')
       .then(({ data }) => setPendingRequest(data.data))
       .catch(() => {})
       .finally(() => setRequestLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 요청이 APPROVED로 바뀌면 프로필 자동 갱신
+  useEffect(() => {
+    if (pendingRequest?.status === 'APPROVED') {
+      refreshSession();
+    }
+  }, [pendingRequest?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '');
