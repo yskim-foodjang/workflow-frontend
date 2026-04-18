@@ -75,8 +75,6 @@ interface ProfileChangeRequest {
   requestedName: string | null;
   requestedPosition: string | null;
   requestedPhone: string | null;
-  requestedDepartmentId: string | null;
-  requestedTeamId: string | null;
   requestedDepartmentName: string | null;
   requestedTeamName: string | null;
   status: string;
@@ -242,11 +240,11 @@ export function AdminUsers() {
                       {req.requestedPhone !== null && (
                         <p><span className="text-slate-400">연락처:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.phone ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedPhone || '-'}</span></p>
                       )}
-                      {req.requestedDepartmentId && (
-                        <p><span className="text-slate-400">부서:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.department?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedDepartmentName ?? req.requestedDepartmentId}</span></p>
+                      {req.requestedDepartmentName && (
+                        <p><span className="text-slate-400">부서:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.department?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedDepartmentName}</span></p>
                       )}
-                      {req.requestedTeamId && (
-                        <p><span className="text-slate-400">팀:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.team?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedTeamName ?? req.requestedTeamId}</span></p>
+                      {req.requestedTeamName && (
+                        <p><span className="text-slate-400">팀:</span> <span className="line-through text-slate-300 dark:text-slate-600 mr-1">{req.user.team?.name ?? '-'}</span><span className="text-emerald-600 dark:text-emerald-400 font-medium">{req.requestedTeamName}</span></p>
                       )}
                     </div>
                   </div>

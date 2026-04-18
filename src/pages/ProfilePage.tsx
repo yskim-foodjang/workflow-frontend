@@ -9,17 +9,11 @@ interface ProfileRequest {
   requestedName: string | null;
   requestedPosition: string | null;
   requestedPhone: string | null;
-  requestedDepartmentId: string | null;
-  requestedTeamId: string | null;
+  requestedDepartmentName: string | null;
+  requestedTeamName: string | null;
   status: string;
   adminNote: string | null;
   createdAt: string;
-}
-
-interface DeptOption {
-  id: string;
-  name: string;
-  teams: { id: string; name: string }[];
 }
 
 export default function ProfilePage() {
@@ -30,22 +24,16 @@ export default function ProfilePage() {
 
   // 프로필 수정 요청
   const [showEditForm, setShowEditForm] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', position: '', phone: '', departmentId: '', teamId: '' });
+  const [editForm, setEditForm] = useState({ name: '', position: '', phone: '', departmentName: '', teamName: '' });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<ProfileRequest | null>(null);
   const [requestLoading, setRequestLoading] = useState(true);
-  const [departments, setDepartments] = useState<DeptOption[]>([]);
-  // 선택한 부서에 속한 팀만 표시
-  const availableTeams = departments.find(d => d.id === editForm.departmentId)?.teams ?? [];
 
   useEffect(() => {
     api.get('/users/me/profile-request')
       .then(({ data }) => setPendingRequest(data.data))
       .catch(() => {})
       .finally(() => setRequestLoading(false));
-    api.get('/users/departments')
-      .then(({ data }) => setDepartments(data.data))
-      .catch(() => {});
   }, []);
 
   const formatPhone = (value: string) => {
@@ -61,8 +49,8 @@ export default function ProfilePage() {
     if (editForm.name.trim()) payload.name = editForm.name.trim();
     if (editForm.position.trim() !== '') payload.position = editForm.position.trim();
     if (editForm.phone.trim() !== '') payload.phone = editForm.phone.trim();
-    if (editForm.departmentId) payload.departmentId = editForm.departmentId;
-    if (editForm.teamId) payload.teamId = editForm.teamId;
+    if (editForm.departmentName.trim()) payload.departmentName = editForm.departmentName.trim();
+    if (editForm.teamName.trim()) payload.teamName = editForm.teamName.trim();
 
     if (Object.keys(payload).length === 0) {
       toast.error('최소 하나의 항목을 입력해주세요.'); return;
@@ -73,7 +61,7 @@ export default function ProfilePage() {
       const { data } = await api.post('/users/me/profile-request', payload);
       setPendingRequest(data.data);
       setShowEditForm(false);
-      setEditForm({ name: '', position: '', phone: '', departmentId: '', teamId: '' });
+      setEditForm({ name: '', position: '', phone: '', departmentName: '', teamName: '' });
       toast.success('수정 요청이 제출되었습니다. 관리자 승인 후 반영됩니다.');
     } catch (err: any) {
       const code = err.response?.data?.error?.code;
@@ -163,7 +151,7 @@ export default function ProfilePage() {
             <button
               onClick={() => {
                 setShowEditForm(!showEditForm);
-                setEditForm({ name: '', position: '', phone: '', departmentId: '', teamId: '' });
+                setEditForm({ name: '', position: '', phone: '', departmentName: '', teamName: '' });
               }}
               className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
             >
@@ -188,12 +176,8 @@ export default function ProfilePage() {
               {pendingRequest.requestedName && <p>이름: {pendingRequest.requestedName}</p>}
               {pendingRequest.requestedPosition !== null && <p>직책: {pendingRequest.requestedPosition || '(삭제)'}</p>}
               {pendingRequest.requestedPhone !== null && <p>연락처: {pendingRequest.requestedPhone || '(삭제)'}</p>}
-              {pendingRequest.requestedDepartmentId && (
-                <p>부서: {departments.find(d => d.id === pendingRequest.requestedDepartmentId)?.name ?? pendingRequest.requestedDepartmentId}</p>
-              )}
-              {pendingRequest.requestedTeamId && (
-                <p>팀: {departments.flatMap(d => d.teams).find(t => t.id === pendingRequest.requestedTeamId)?.name ?? pendingRequest.requestedTeamId}</p>
-              )}
+              {pendingRequest.requestedDepartmentName && <p>부서: {pendingRequest.requestedDepartmentName}</p>}
+              {pendingRequest.requestedTeamName && <p>팀: {pendingRequest.requestedTeamName}</p>}
             </div>
             {pendingRequest.adminNote && (
               <p className="mt-1.5 text-xs opacity-70">관리자 메모: {pendingRequest.adminNote}</p>
@@ -245,34 +229,26 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 부서 <span className="text-xs font-normal text-slate-400">(현재: {user?.department?.name || '-'})</span>
               </label>
-              <select
-                value={editForm.departmentId}
-                onChange={(e) => setEditForm((f) => ({ ...f, departmentId: e.target.value, teamId: '' }))}
+              <input
+                type="text"
+                value={editForm.departmentName}
+                onChange={(e) => setEditForm((f) => ({ ...f, departmentName: e.target.value }))}
                 className="input-field"
-              >
-                <option value="">부서 선택 안함 (유지)</option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+                placeholder="변경할 부서명 (비워두면 유지)"
+              />
             </div>
-            {editForm.departmentId && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                  팀 <span className="text-xs font-normal text-slate-400">(현재: {user?.team?.name || '-'})</span>
-                </label>
-                <select
-                  value={editForm.teamId}
-                  onChange={(e) => setEditForm((f) => ({ ...f, teamId: e.target.value }))}
-                  className="input-field"
-                >
-                  <option value="">팀 선택 안함</option>
-                  {availableTeams.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                팀 <span className="text-xs font-normal text-slate-400">(현재: {user?.team?.name || '-'})</span>
+              </label>
+              <input
+                type="text"
+                value={editForm.teamName}
+                onChange={(e) => setEditForm((f) => ({ ...f, teamName: e.target.value }))}
+                className="input-field"
+                placeholder="변경할 팀명 (비워두면 유지)"
+              />
+            </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">
               * 수정 요청은 관리자 승인 후 반영됩니다.
             </p>
