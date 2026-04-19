@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '@/utils/api';
 import { useAgenda, useCreateAgenda, useUpdateAgenda } from '@/hooks/useAgendas';
 import { AGENDA_TYPE_LABELS, RECURRENCE_LABELS, CATEGORY_LABELS } from '@/utils/constants';
-import type { User, RecurrenceConfig, AgendaCategory } from '@/types';
+import type { User, RecurrenceConfig, AgendaCategory, Attachment } from '@/types';
 import toast from 'react-hot-toast';
 import { Button, Card, CalendarPicker, PageHeader, FileUpload } from '@/components/ui';
 import type { UploadedFile } from '@/components/ui';
@@ -101,6 +101,8 @@ export default function AgendaFormPage() {
   });
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [uploadFiles, setUploadFiles] = useState<UploadedFile[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const isSubmitting = createAgenda.isPending || updateAgenda.isPending;
 
@@ -133,6 +135,7 @@ export default function AgendaFormPage() {
         participantIds: agenda.participants.map((p) => p.user.id),
       });
       setSelectedUsers(agenda.participants.map((p) => p.user));
+      setExistingAttachments(agenda.attachments ?? []);
     }
   }, [agenda, isEdit]);
 
@@ -154,6 +157,21 @@ export default function AgendaFormPage() {
       agendaStartDate: v,
       agendaDeadlineDate: prev.agendaDeadlineDate && prev.agendaDeadlineDate < v ? '' : prev.agendaDeadlineDate,
     }));
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!id) return;
+    if (!confirm('첨부파일을 삭제하시겠습니까?')) return;
+    try {
+      setDeletingId(attachmentId);
+      await api.delete(`/agendas/${id}/attachments/${attachmentId}`);
+      setExistingAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+      toast.success('첨부파일이 삭제되었습니다.');
+    } catch {
+      toast.error('첨부파일 삭제에 실패했습니다.');
+    } finally {
+      setDeletingId(null);
+    }
   };;
 
   const handleAddParticipant = (user: User) => {
@@ -403,6 +421,66 @@ export default function AgendaFormPage() {
 
         <Card>
           <FormField label="첨부파일">
+            {/* 수정 모드: 기존 첨부파일 목록 */}
+            {isEdit && existingAttachments.length > 0 && (
+              <div className="mb-3 space-y-2">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">업로드된 파일</p>
+                {existingAttachments.map((att) => {
+                  const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(att.filename);
+                  const sizeText = att.size < 1024 * 1024
+                    ? `${(att.size / 1024).toFixed(1)} KB`
+                    : `${(att.size / (1024 * 1024)).toFixed(1)} MB`;
+                  return (
+                    <div key={att.id} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                      {/* 아이콘 */}
+                      <div className="flex-shrink-0 text-slate-400">
+                        {isImage ? (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                          </svg>
+                        )}
+                      </div>
+                      {/* 파일명 + 크기 */}
+                      <div className="flex-1 min-w-0">
+                        <a
+                          href={att.bucketPath}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary-600 dark:text-primary-400 hover:underline truncate block"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {att.filename}
+                        </a>
+                        <span className="text-xs text-slate-400">{sizeText}</span>
+                      </div>
+                      {/* 삭제 버튼 */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAttachment(att.id)}
+                        disabled={deletingId === att.id}
+                        className="flex-shrink-0 text-slate-400 hover:text-rose-500 disabled:opacity-50 transition-colors"
+                        title="삭제"
+                      >
+                        {deletingId === att.id ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {/* 새 파일 추가 */}
             <FileUpload files={uploadFiles} onChange={setUploadFiles} />
           </FormField>
         </Card>
