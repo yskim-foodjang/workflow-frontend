@@ -60,7 +60,7 @@ export interface Agenda {
   participants: AgendaParticipant[];
   attachments: Attachment[];
   comments?: Comment[];
-  _count?: { comments: number };
+  _count?: { comments: number; attachments: number };
 }
 
 export type AgendaType = 'MEETING' | 'TASK' | 'DEADLINE' | 'TRIP' | 'OTHER';
