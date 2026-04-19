@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG, CATEGORY_LABELS, CATEGORY_BG } from '@/utils/constants';
-import { format, isThisWeek, isSameDay, differenceInDays, startOfDay, endOfDay } from 'date-fns';
+import { format, isThisWeek, isSameDay, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Card, Badge, PageHeader, Skeleton, StatCardSkeleton } from '@/components/ui';
 import api from '@/utils/api';
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                     if (endDate) timeInfo += ` ~ ${format(endDate, 'HH:mm', { locale: ko })}`;
                   }
                 } else if (deadlineDate) {
-                  const days = differenceInDays(deadlineDate, new Date());
+                  const days = differenceInCalendarDays(deadlineDate, new Date());
                   const ampm = deadlineDate.getHours() < 12 ? '오전' : '오후';
                   timeInfo = days === 0 ? `오늘 마감 (${ampm})` : days < 0 ? `${Math.abs(days)}일 초과 (${ampm})` : `${days}일 후 마감 (${ampm})`;
                 }

@@ -124,7 +124,11 @@ export default function DashboardTab({ selectedDate, displayMonth, agendas, holi
                   const dayAgendas     = getAgendasForDay(agendas, day);
                   // 간트바로 이미 표시되는 다일 스케줄은 점에서 제외
                   const dotAgendas     = dayAgendas.filter(a => !isMultiDaySchedule(a));
-                  const colors         = dotAgendas.map(getColor);
+                  const colors         = dotAgendas.map(a =>
+                    a.category === 'AGENDA' && a.deadline && isSameDay(new Date(a.deadline), day)
+                      ? '#EF4444'
+                      : getColor(a)
+                  );
                   const total          = colors.length;
                   const shown          = total >= 7 ? colors.slice(0, 5) : colors.slice(0, 6);
                   const extra          = total >= 7 ? total - 5 : 0;
