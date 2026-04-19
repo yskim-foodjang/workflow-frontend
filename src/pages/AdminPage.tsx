@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { PageHeader, Card } from '@/components/ui';
@@ -12,6 +12,7 @@ const adminTabs = [
   { to: '/admin/users', label: '사용자 관리' },
   { to: '/admin/departments', label: '회사/부서 관리' },
   { to: '/admin/stats', label: '통계' },
+  { to: '/admin/server', label: '서버 현황' },
 ];
 
 export default function AdminPage() {
@@ -605,5 +606,188 @@ export function AdminApprovals() {
         </div>
       )}
     </Card>
+  );
+}
+
+// ── 서버 현황 ─────────────────────────────────────────────────────────────────
+interface ServerStats {
+  db: {
+    sizeBytes: number;
+    limitBytes: number;
+    tables: {
+      users: number;
+      agendas: number;
+      notifications: number;
+      comments: number;
+      refreshTokens: number;
+      attachments: number;
+    };
+  };
+  cloudinary: {
+    usageBytes: number;
+    limitBytes: number;
+  };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  if (bytes >= 1024)      return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
+}
+
+function UsageBar({ used, limit, color }: { used: number; limit: number; color: string }) {
+  const pct = Math.min(100, (used / limit) * 100);
+  const barColor =
+    pct >= 90 ? 'bg-rose-500' :
+    pct >= 70 ? 'bg-amber-500' :
+    color;
+  return (
+    <div className="mt-2">
+      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+        <span>{formatBytes(used)}</span>
+        <span>{pct.toFixed(1)}% / {formatBytes(limit)}</span>
+      </div>
+      <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+export function AdminServerStats() {
+  const [stats, setStats] = useState<ServerStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [cleaning, setCleaning] = useState(false);
+  const [lastCleanup, setLastCleanup] = useState<{ notifications: number; tokens: number } | null>(null);
+  const fetchedRef = useRef(false);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get<{ data: ServerStats }>('/admin/server-stats');
+      setStats(data.data);
+    } catch {
+      toast.error('서버 현황 조회에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetchStats();
+  }, [fetchStats]);
+
+  const handleCleanup = async () => {
+    if (!confirm('알림 및 만료 토큰을 즉시 정리하시겠습니까?')) return;
+    try {
+      setCleaning(true);
+      const { data } = await api.post<{ data: { deleted: { notifications: number; tokens: number } } }>('/admin/cleanup');
+      setLastCleanup(data.data.deleted);
+      toast.success(data.data.deleted
+        ? `알림 ${data.data.deleted.notifications}건, 토큰 ${data.data.deleted.tokens}건 삭제 완료`
+        : '정리 완료 (삭제할 항목 없음)');
+      await fetchStats();
+    } catch {
+      toast.error('정리 작업에 실패했습니다.');
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2].map(i => (
+          <Card key={i}>
+            <div className="animate-pulse space-y-3">
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
+              <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded" />
+              <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded w-2/3" />
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats) return null;
+
+  const tableRows = [
+    { label: '사용자', count: stats.db.tables.users,         icon: '👤' },
+    { label: '아젠다', count: stats.db.tables.agendas,       icon: '📋' },
+    { label: '댓글',   count: stats.db.tables.comments,      icon: '💬' },
+    { label: '알림',   count: stats.db.tables.notifications, icon: '🔔', warn: stats.db.tables.notifications > 10000 },
+    { label: '토큰',   count: stats.db.tables.refreshTokens, icon: '🔑', warn: stats.db.tables.refreshTokens > 5000 },
+    { label: '첨부파일', count: stats.db.tables.attachments, icon: '📎' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* DB 용량 */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">🗄️ 데이터베이스</h2>
+          <button
+            onClick={fetchStats}
+            className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+          >
+            새로고침
+          </button>
+        </div>
+        <UsageBar used={stats.db.sizeBytes} limit={stats.db.limitBytes} color="bg-primary-500" />
+
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {tableRows.map(row => (
+            <div
+              key={row.label}
+              className={clsx(
+                'rounded-lg p-3 border',
+                row.warn
+                  ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700'
+                  : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'
+              )}
+            >
+              <p className="text-xs text-slate-500 dark:text-slate-400">{row.icon} {row.label}</p>
+              <p className={clsx(
+                'text-xl font-bold mt-0.5',
+                row.warn ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'
+              )}>
+                {row.count.toLocaleString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Cloudinary 용량 */}
+      <Card>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-3">☁️ 파일 스토리지 (Cloudinary)</h2>
+        <UsageBar used={stats.cloudinary.usageBytes} limit={stats.cloudinary.limitBytes} color="bg-teal-500" />
+      </Card>
+
+      {/* 자동 정리 안내 + 수동 실행 */}
+      <Card>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-3">🧹 자동 정리 스케줄</h2>
+        <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400 mb-4">
+          <p>• 매일 <span className="font-medium text-slate-800 dark:text-slate-200">새벽 2시 UTC</span> — 읽은 알림(30일 초과) + 미읽은 알림(90일 초과) 삭제</p>
+          <p>• 매일 <span className="font-medium text-slate-800 dark:text-slate-200">새벽 3시 UTC</span> — 만료된 RefreshToken · PasswordResetToken 삭제</p>
+        </div>
+        {lastCleanup && (
+          <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-sm text-green-700 dark:text-green-400">
+            마지막 수동 정리: 알림 {lastCleanup.notifications}건, 토큰 {lastCleanup.tokens}건 삭제
+          </div>
+        )}
+        <button
+          onClick={handleCleanup}
+          disabled={cleaning}
+          className="w-full py-2.5 rounded-lg text-sm font-medium bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-700 hover:bg-rose-100 dark:hover:bg-rose-900/40 disabled:opacity-50 transition-colors"
+        >
+          {cleaning ? '정리 중...' : '지금 바로 정리 실행'}
+        </button>
+      </Card>
+    </div>
   );
 }
