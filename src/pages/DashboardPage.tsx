@@ -192,7 +192,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {timeInfo && (
-                          <span className={`text-xs ${!isSchedule && deadlineDate && differenceInDays(deadlineDate, new Date()) <= 0 ? 'text-rose-500 dark:text-rose-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                          <span className={`text-xs ${!isSchedule && deadlineDate && differenceInCalendarDays(deadlineDate, new Date()) <= 0 ? 'text-rose-500 dark:text-rose-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                             {timeInfo}
                           </span>
                         )}
