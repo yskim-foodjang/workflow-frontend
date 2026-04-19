@@ -62,6 +62,8 @@ export default function RegisterPage() {
       const code = err.response?.data?.error?.code;
       if (code === 'EMAIL_EXISTS') {
         toast.error('이미 등록된 이메일입니다.');
+      } else if (code === 'PHONE_EXISTS') {
+        toast.error('이미 등록된 핸드폰번호입니다.');
       } else {
         toast.error('회원가입에 실패했습니다. 다시 시도해주세요.');
       }
@@ -131,12 +133,12 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">회사 *</label>
-                  <input type="text" value={form.factoryName} onChange={set('factoryName')} className="input-field" placeholder="○○공장" required />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">회사명 *</label>
+                  <input type="text" value={form.factoryName} onChange={set('factoryName')} className="input-field" placeholder="푸드장" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">부서 *</label>
-                  <input type="text" value={form.teamName} onChange={set('teamName')} className="input-field" placeholder="생산팀" required />
+                  <input type="text" value={form.teamName} onChange={set('teamName')} className="input-field" placeholder="제조1팀" required />
                 </div>
               </div>
 
