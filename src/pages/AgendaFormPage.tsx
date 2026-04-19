@@ -139,6 +139,23 @@ export default function AgendaFormPage() {
   const set = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  // 시작일 변경 시 종료일/마감일이 더 이른 날짜면 초기화
+  const handleSchedStartDateChange = (v: string) => {
+    setForm((prev) => ({
+      ...prev,
+      schedStartDate: v,
+      schedEndDate: prev.schedEndDate && prev.schedEndDate < v ? v : prev.schedEndDate,
+    }));
+  };
+
+  const handleAgendaStartDateChange = (v: string) => {
+    setForm((prev) => ({
+      ...prev,
+      agendaStartDate: v,
+      agendaDeadlineDate: prev.agendaDeadlineDate && prev.agendaDeadlineDate < v ? '' : prev.agendaDeadlineDate,
+    }));
+  };;
+
   const handleAddParticipant = (user: User) => {
     if (!form.participantIds.includes(user.id)) {
       set('participantIds', [...form.participantIds, user.id]);
@@ -163,6 +180,9 @@ export default function AgendaFormPage() {
       if (!form.agendaStartDate) { toast.error('시작 날짜를 입력하세요.'); return; }
       startAt = new Date(`${form.agendaStartDate}T00:00:00`).toISOString();
       if (form.agendaDeadlineDate) {
+        if (form.agendaDeadlineDate < form.agendaStartDate) {
+          toast.error('마감기한은 시작 날짜보다 이른 날짜로 설정할 수 없습니다.'); return;
+        }
         const h = form.agendaDeadlineAmPm === 'AM' ? 12 : 18;
         deadline = new Date(`${form.agendaDeadlineDate}T${String(h).padStart(2, '0')}:00:00`).toISOString();
       }
@@ -171,6 +191,9 @@ export default function AgendaFormPage() {
       if (!form.schedEndDate) { toast.error('종료 날짜를 입력하세요.'); return; }
       startAt = buildDateTime(form.schedStartDate, form.schedStartHour, form.schedStartMinute);
       endAt = buildDateTime(form.schedEndDate, form.schedEndHour, form.schedEndMinute);
+      if (new Date(endAt) < new Date(startAt)) {
+        toast.error('종료 일시는 시작 일시보다 이른 시간으로 설정할 수 없습니다.'); return;
+      }
     }
 
     const payload = {
@@ -271,10 +294,10 @@ export default function AgendaFormPage() {
             {form.category === 'AGENDA' && (
               <>
                 <FormField label="시작 날짜" required>
-                  <CalendarPicker value={form.agendaStartDate} onChange={(v) => set('agendaStartDate', v)} />
+                  <CalendarPicker value={form.agendaStartDate} onChange={handleAgendaStartDateChange} />
                 </FormField>
                 <FormField label="마감기한">
-                  <CalendarPicker value={form.agendaDeadlineDate} onChange={(v) => set('agendaDeadlineDate', v)} />
+                  <CalendarPicker value={form.agendaDeadlineDate} onChange={(v) => set('agendaDeadlineDate', v)} minDate={form.agendaStartDate || undefined} />
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     {(['AM', 'PM'] as const).map((v) => (
                       <button
@@ -298,7 +321,7 @@ export default function AgendaFormPage() {
             {form.category === 'SCHEDULE' && (
               <>
                 <FormField label="시작" required>
-                  <CalendarPicker value={form.schedStartDate} onChange={(v) => set('schedStartDate', v)} />
+                  <CalendarPicker value={form.schedStartDate} onChange={handleSchedStartDateChange} />
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <Select value={form.schedStartHour} onChange={(e) => set('schedStartHour', e.target.value)}>
                       {HOURS.map((h) => <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>)}
@@ -309,7 +332,7 @@ export default function AgendaFormPage() {
                   </div>
                 </FormField>
                 <FormField label="종료" required>
-                  <CalendarPicker value={form.schedEndDate} onChange={(v) => set('schedEndDate', v)} />
+                  <CalendarPicker value={form.schedEndDate} onChange={(v) => set('schedEndDate', v)} minDate={form.schedStartDate || undefined} />
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <Select value={form.schedEndHour} onChange={(e) => set('schedEndHour', e.target.value)}>
                       {HOURS.map((h) => <option key={h} value={String(h)}>{String(h).padStart(2, '0')}시</option>)}

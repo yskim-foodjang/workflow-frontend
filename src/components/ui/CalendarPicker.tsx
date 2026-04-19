@@ -6,13 +6,16 @@ export default function CalendarPicker({
   value,
   onChange,
   placeholder = '날짜 선택',
+  minDate,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  minDate?: string; // 'YYYY-MM-DD' — 이 날짜 이전은 선택 불가
 }) {
   const today = new Date();
   const selected = value ? new Date(value + 'T00:00:00') : null;
+  const min     = minDate ? new Date(minDate + 'T00:00:00') : null;
   const [open, setOpen] = useState(false);
   const [year, setYear] = useState(selected?.getFullYear() ?? today.getFullYear());
   const [month, setMonth] = useState(selected?.getMonth() ?? today.getMonth());
@@ -38,7 +41,14 @@ export default function CalendarPicker({
     ...Array.from({ length: totalDays }, (_, i) => i + 1),
   ];
 
+  const isDisabled = (day: number) => {
+    if (!min) return false;
+    const d = new Date(year, month, day);
+    return d < min;
+  };
+
   const handleSelect = (day: number) => {
+    if (isDisabled(day)) return;
     onChange(`${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
     setOpen(false);
   };
@@ -134,22 +144,24 @@ export default function CalendarPicker({
                   key={day}
                   type="button"
                   onClick={() => handleSelect(day)}
+                  disabled={isDisabled(day)}
                   className={`w-full aspect-square flex items-center justify-center text-sm rounded-lg transition-colors
-                    ${
-                      selected &&
-                      day === selected.getDate() &&
-                      month === selected.getMonth() &&
-                      year === selected.getFullYear()
-                        ? 'bg-primary-600 text-white font-semibold'
-                        : day === today.getDate() &&
-                          month === today.getMonth() &&
-                          year === today.getFullYear()
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
-                        : idx % 7 === 0
-                        ? 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20'
-                        : idx % 7 === 6
-                        ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    ${isDisabled(day)
+                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                      : selected &&
+                        day === selected.getDate() &&
+                        month === selected.getMonth() &&
+                        year === selected.getFullYear()
+                      ? 'bg-primary-600 text-white font-semibold'
+                      : day === today.getDate() &&
+                        month === today.getMonth() &&
+                        year === today.getFullYear()
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
+                      : idx % 7 === 0
+                      ? 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20'
+                      : idx % 7 === 6
+                      ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                 >
                   {day}
