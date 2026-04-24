@@ -1,21 +1,36 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { PageHeader, Card } from '@/components/ui';
 import api from '@/utils/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
-const adminTabs = [
-  { to: '/admin', label: '개요', end: true },
-  { to: '/admin/approvals', label: '승인 관리' },
-  { to: '/admin/users', label: '사용자 관리' },
-  { to: '/admin/departments', label: '회사/부서 관리' },
-  { to: '/admin/stats', label: '통계' },
-  { to: '/admin/server', label: '서버 현황' },
-];
+const ADMIN_NOTIFICATION_TYPES = ['USER_REGISTERED', 'PROFILE_CHANGE_REQUESTED'];
 
 export default function AdminPage() {
+  const { notifications } = useNotifications();
+  const adminUnreadCount = notifications.filter(
+    (n) => !n.isRead && ADMIN_NOTIFICATION_TYPES.includes(n.type)
+  ).length;
+
+  const adminTabs = [
+    { to: '/admin', label: '개요', end: true },
+    {
+      to: '/admin/notifications',
+      label: '알림',
+      badge: adminUnreadCount > 0 ? adminUnreadCount : undefined,
+    },
+    { to: '/admin/approvals', label: '승인 관리' },
+    { to: '/admin/users', label: '사용자 관리' },
+    { to: '/admin/departments', label: '회사/부서 관리' },
+    { to: '/admin/stats', label: '통계' },
+    { to: '/admin/server', label: '서버 현황' },
+  ];
+
   return (
     <div>
       <PageHeader title="관리자" />
@@ -27,7 +42,7 @@ export default function AdminPage() {
             end={tab.end}
             className={({ isActive }) =>
               clsx(
-                'px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+                'relative px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
                 isActive
                   ? 'bg-primary-600 text-white'
                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
@@ -35,6 +50,11 @@ export default function AdminPage() {
             }
           >
             {tab.label}
+            {tab.badge !== undefined && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[1rem] px-1 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                {tab.badge > 99 ? '99+' : tab.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </div>
@@ -789,5 +809,126 @@ export function AdminServerStats() {
         </button>
       </Card>
     </div>
+  );
+}
+
+// ── 관리자 알림 ───────────────────────────────────────────────────────────────
+const NOTI_TYPE_META: Record<string, { icon: string; label: string; link: string }> = {
+  USER_REGISTERED:        { icon: '👤', label: '가입 신청', link: '/admin/approvals' },
+  PROFILE_CHANGE_REQUESTED: { icon: '✏️', label: '프로필 수정 요청', link: '/admin/users' },
+};
+
+export function AdminNotifications() {
+  const { notifications, isLoading, markAsRead, markAllAsRead } = useNotifications();
+
+  const adminNotifications = notifications.filter((n) =>
+    ADMIN_NOTIFICATION_TYPES.includes(n.type)
+  );
+
+  const unreadCount = adminNotifications.filter((n) => !n.isRead).length;
+
+  if (isLoading) {
+    return (
+      <Card>
+        <div className="flex justify-center py-10">
+          <svg className="animate-spin w-6 h-6 text-primary-600" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          관리자 알림
+          {unreadCount > 0 && (
+            <span className="text-xs font-normal bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-full">
+              {unreadCount}건 미확인
+            </span>
+          )}
+        </h2>
+        {unreadCount > 0 && (
+          <button
+            onClick={() => markAllAsRead()}
+            className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+          >
+            전체 읽음
+          </button>
+        )}
+      </div>
+
+      {adminNotifications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <svg className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          <p className="text-sm text-slate-400 dark:text-slate-500">새 관리자 알림이 없습니다.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {adminNotifications.map((n) => {
+            const meta = NOTI_TYPE_META[n.type];
+            return (
+              <div
+                key={n.id}
+                className={clsx(
+                  'flex items-start gap-3 p-3 rounded-xl border transition-colors',
+                  n.isRead
+                    ? 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-700/50'
+                    : 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-700/50'
+                )}
+              >
+                {/* 읽음 dot */}
+                <div
+                  className={clsx(
+                    'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
+                    n.isRead ? 'bg-slate-300 dark:bg-slate-600' : 'bg-amber-500'
+                  )}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      {meta?.icon} {meta?.label ?? n.type}
+                    </span>
+                  </div>
+                  <p className={clsx(
+                    'text-sm',
+                    n.isRead ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white font-medium'
+                  )}>
+                    {n.message}
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    {format(new Date(n.createdAt), 'M/d HH:mm', { locale: ko })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {meta?.link && (
+                    <Link
+                      to={meta.link}
+                      className="text-xs text-primary-600 dark:text-primary-400 hover:underline whitespace-nowrap"
+                      onClick={() => { if (!n.isRead) markAsRead(n.id); }}
+                    >
+                      바로가기
+                    </Link>
+                  )}
+                  {!n.isRead && (
+                    <button
+                      onClick={() => markAsRead(n.id)}
+                      className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 whitespace-nowrap"
+                    >
+                      읽음
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }

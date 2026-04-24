@@ -66,7 +66,7 @@ interface FormData {
 
 const emptyForm: FormData = {
   category: 'SCHEDULE',
-  title: '', type: 'OTHER', description: '',
+  title: '', type: 'MEETING', description: '',
   agendaStartDate: '', agendaDeadlineDate: '', agendaDeadlineAmPm: 'AM',
   schedStartDate: '', schedStartHour: '9', schedStartMinute: '00',
   schedEndDate: '', schedEndHour: '10', schedEndMinute: '00',

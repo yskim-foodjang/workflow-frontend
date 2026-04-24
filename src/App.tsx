@@ -26,10 +26,11 @@ const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const ResetPasswordPage  = lazy(() => import('@/pages/ResetPasswordPage'));
 
 // Admin 서브 컴포넌트 (AdminPage 내에서 named export)
-const AdminOverview     = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminOverview })));
-const AdminApprovals    = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminApprovals })));
-const AdminUsers        = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminUsers })));
-const AdminServerStats  = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminServerStats })));
+const AdminOverview        = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminOverview })));
+const AdminApprovals       = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminApprovals })));
+const AdminUsers           = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminUsers })));
+const AdminServerStats     = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminServerStats })));
+const AdminNotifications   = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminNotifications })));
 
 // ─── 페이지 로딩 폴백 ────────────────────────────────────────────────────────
 function PageLoader() {
@@ -106,12 +107,13 @@ function AppRoutes() {
           <Route path="/profile"          element={<ProfilePage />} />
 
           <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>}>
-            <Route index              element={<AdminOverview />} />
-            <Route path="approvals"   element={<AdminApprovals />} />
-            <Route path="users"       element={<AdminUsers />} />
-            <Route path="departments" element={<AdminOverview />} />
-            <Route path="stats"       element={<AdminOverview />} />
-            <Route path="server"      element={<AdminServerStats />} />
+            <Route index                 element={<AdminOverview />} />
+            <Route path="notifications"  element={<AdminNotifications />} />
+            <Route path="approvals"      element={<AdminApprovals />} />
+            <Route path="users"          element={<AdminUsers />} />
+            <Route path="departments"    element={<AdminOverview />} />
+            <Route path="stats"          element={<AdminOverview />} />
+            <Route path="server"         element={<AdminServerStats />} />
           </Route>
         </Route>
 
