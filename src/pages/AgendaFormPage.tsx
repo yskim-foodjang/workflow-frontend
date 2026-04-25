@@ -80,10 +80,11 @@ export default function AgendaFormPage() {
   const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
+  const scope = searchParams.get('scope') as 'THIS' | 'FOLLOWING' | 'ALL' | null;
   const { agenda } = useAgenda(isEdit ? id : undefined);
 
   const createAgenda = useCreateAgenda();
-  const updateAgenda = useUpdateAgenda(id ?? '');
+  const updateAgenda = useUpdateAgenda(id ?? '', scope);
 
   const [form, setForm] = useState<FormData>(() => {
     // URL 파라미터에서 날짜 초기값 설정 (캘린더에서 클릭 시)
@@ -272,7 +273,15 @@ export default function AgendaFormPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <PageHeader title={isEdit ? `${CATEGORY_LABELS[form.category]} 수정` : '새 일정'} />
+      <PageHeader title={
+        isEdit
+          ? (scope === 'ALL'
+              ? `전체 반복 일정 수정`
+              : scope === 'FOLLOWING'
+                ? `이번 이후 일정 수정`
+                : `${CATEGORY_LABELS[form.category]} 수정`)
+          : '새 일정'
+      } />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 카테고리 토글 */}

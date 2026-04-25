@@ -3,6 +3,7 @@ import type { Agenda } from '@/types';
 
 export const TYPE_ACCENT: Record<string, string> = {
   MEETING:  '#3B82F6',
+  MEETUP:   '#06B6D4',
   TASK:     '#10B981',
   DEADLINE: '#F43F5E',
   TRIP:     '#F59E0B',
@@ -13,6 +14,7 @@ export const TYPE_ACCENT: Record<string, string> = {
 
 export const TYPE_LABEL: Record<string, string> = {
   MEETING:  '회의',
+  MEETUP:   '미팅',
   TASK:     '업무',
   DEADLINE: '마감',
   TRIP:     '출장',

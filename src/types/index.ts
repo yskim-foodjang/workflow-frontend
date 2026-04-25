@@ -61,9 +61,10 @@ export interface Agenda {
   attachments: Attachment[];
   comments?: Comment[];
   _count?: { comments: number; attachments: number };
+  recurrenceParentId?: string | null;
 }
 
-export type AgendaType = 'MEETING' | 'TASK' | 'DEADLINE' | 'TRIP' | 'OTHER';
+export type AgendaType = 'MEETING' | 'MEETUP' | 'TASK' | 'DEADLINE' | 'TRIP' | 'OTHER';
 export type Priority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type Visibility = 'PRIVATE' | 'TEAM' | 'DEPARTMENT' | 'PUBLIC';
 export type ParticipantRole = 'ORGANIZER' | 'PARTICIPANT' | 'REVIEWER' | 'OBSERVER';

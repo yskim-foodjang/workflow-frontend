@@ -112,12 +112,13 @@ export function useCreateAgenda() {
 
 // ─── 수정 ─────────────────────────────────────────────────────────────────────
 
-export function useUpdateAgenda(id: string) {
+export function useUpdateAgenda(id: string, scope?: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data } = await api.put<ApiResponse<Agenda>>(`/agendas/${id}`, payload);
+      const url = scope ? `/agendas/${id}?scope=${scope}` : `/agendas/${id}`;
+      const { data } = await api.put<ApiResponse<Agenda>>(url, payload);
       return data.data;
     },
     onSuccess: (updated) => {

@@ -44,6 +44,9 @@ export default function AgendaDetailPage() {
   const [showOrganizerModal, setShowOrganizerModal] = useState(false);
   const [orgDeadline, setOrgDeadline] = useState('');
   const [orgAmPm, setOrgAmPm] = useState<'AM' | 'PM'>('AM');
+  // ── 반복 스케줄 범위 선택 다이얼로그 ──────────────────────────────────────────
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false);
+  const [recurringDialogMode, setRecurringDialogMode] = useState<'edit' | 'delete'>('edit');
 
   const extensionQueryKey = ['agendas', id, 'extension-requests'] as const;
 
@@ -165,14 +168,66 @@ export default function AgendaDetailPage() {
     });
   };
 
+  // 반복 스케줄 여부 체크
+  const isRecurringInstance = Boolean(agenda?.recurrenceParentId);
+  const isRecurringParent = !isRecurringInstance && agenda?.category === 'SCHEDULE' && agenda?.recurrence?.type !== 'NONE';
+  const isRecurring = isRecurringInstance || isRecurringParent;
+
+  // 진행 중 여부 체크 (스케줄 전용)
+  const isInProgress = agenda?.category === 'SCHEDULE' && !agenda?.isCompleted && (() => {
+    const now = new Date();
+    const start = new Date(agenda!.startAt);
+    const end = agenda!.endAt ? new Date(agenda!.endAt) : null;
+    return start <= now && end !== null && end > now;
+  })();
+
   const handleDelete = () => {
+    if (isRecurring) {
+      setRecurringDialogMode('delete');
+      setShowRecurringDialog(true);
+      return;
+    }
     if (!confirm('정말 삭제하시겠습니까?')) return;
     deleteAgenda.mutate(id!, {
       onSuccess: () => {
-        toast.success('아젠다가 삭제되었습니다.');
+        toast.success('일정이 삭제되었습니다.');
         navigate('/agendas');
       },
     });
+  };
+
+  const handleRecurringAction = async (scope: 'THIS' | 'FOLLOWING' | 'ALL') => {
+    setShowRecurringDialog(false);
+    const parentId = agenda?.recurrenceParentId;
+
+    if (recurringDialogMode === 'edit') {
+      if (scope === 'ALL') {
+        // 인스턴스면 부모 ID로, 부모면 자기 자신으로
+        const targetId = parentId || id;
+        navigate(`/agendas/${targetId}/edit?scope=ALL`);
+      } else if (scope === 'FOLLOWING') {
+        navigate(`/agendas/${id}/edit?scope=FOLLOWING`);
+      } else {
+        navigate(`/agendas/${id}/edit`);
+      }
+      return;
+    }
+
+    // delete
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    const url = scope === 'ALL'
+      ? `/agendas/${id}?scope=ALL`
+      : scope === 'FOLLOWING'
+        ? `/agendas/${id}?scope=FOLLOWING`
+        : `/agendas/${id}`;
+
+    try {
+      await api.delete(url);
+      toast.success('일정이 삭제되었습니다.');
+      navigate('/agendas');
+    } catch {
+      toast.error('삭제에 실패했습니다.');
+    }
   };
 
   // 댓글 추가/삭제 후 캐시 무효화
@@ -191,6 +246,17 @@ export default function AgendaDetailPage() {
             )}
             {agenda.isCompleted && <Badge variant="success">완료</Badge>}
             {agenda.isNotice && <Badge variant="warning">공지</Badge>}
+            {isInProgress && (
+              <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">진행 중</Badge>
+            )}
+            {isRecurring && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                반복
+              </span>
+            )}
           </div>
           <h1
             className={clsx(
@@ -216,9 +282,20 @@ export default function AgendaDetailPage() {
           )}
           {canEdit && (
             <>
-              <Link to={`/agendas/${id}/edit`}>
-                <Button variant="secondary" size="sm">수정</Button>
-              </Link>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (isRecurring) {
+                    setRecurringDialogMode('edit');
+                    setShowRecurringDialog(true);
+                  } else {
+                    navigate(`/agendas/${id}/edit`);
+                  }
+                }}
+              >
+                수정
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"
@@ -549,6 +626,64 @@ export default function AgendaDetailPage() {
         isAdmin={isAdmin}
         onRefresh={refreshComments}
       />
+
+      {/* 반복 스케줄 범위 선택 다이얼로그 */}
+      {showRecurringDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-1">
+              반복 일정 {recurringDialogMode === 'edit' ? '수정' : '삭제'}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+              어느 범위의 일정을 {recurringDialogMode === 'edit' ? '수정' : '삭제'}할까요?
+            </p>
+
+            <div className="space-y-2 mb-5">
+              <button
+                type="button"
+                className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors"
+                onClick={() => handleRecurringAction('THIS')}
+              >
+                <div className="font-medium text-slate-900 dark:text-white text-sm">이번 일정만</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">선택한 일정 한 건만 {recurringDialogMode === 'edit' ? '수정' : '삭제'}합니다.</div>
+              </button>
+              {isRecurringInstance && (
+                <button
+                  type="button"
+                  className="w-full text-left px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors"
+                  onClick={() => handleRecurringAction('FOLLOWING')}
+                >
+                  <div className="font-medium text-slate-900 dark:text-white text-sm">이번 이후 모든 일정</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">이 일정 및 이후 반복 일정을 모두 {recurringDialogMode === 'edit' ? '수정' : '삭제'}합니다.</div>
+                </button>
+              )}
+              <button
+                type="button"
+                className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                  recurringDialogMode === 'delete'
+                    ? 'border-rose-200 dark:border-rose-800 hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/10'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10'
+                }`}
+                onClick={() => handleRecurringAction('ALL')}
+              >
+                <div className={`font-medium text-sm ${recurringDialogMode === 'delete' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+                  모든 반복 일정
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">이 반복 일정의 모든 항목을 {recurringDialogMode === 'edit' ? '수정' : '삭제'}합니다.</div>
+              </button>
+            </div>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
+              onClick={() => setShowRecurringDialog(false)}
+            >
+              취소
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
