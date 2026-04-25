@@ -72,6 +72,7 @@ export type ParticipantRole = 'ORGANIZER' | 'PARTICIPANT' | 'REVIEWER' | 'OBSERV
 export interface AgendaParticipant {
   id: string;
   role: ParticipantRole;
+  confirmedAt?: string | null;
   user: User;
 }
 

@@ -6,10 +6,12 @@ import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/contexts/AuthContext';
 import { AGENDA_TYPE_LABELS, AGENDA_TYPE_BG } from '@/utils/constants';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import { Button, Badge, CalendarPicker, Card, EmptyState, SkeletonList } from '@/components/ui';
-import { AgendaDetailView, ParticipantList, CommentSection } from '@/components/agenda';
+import { AgendaDetailView, CommentSection } from '@/components/agenda';
 import api from '@/utils/api';
 import type { ApiResponse, DeadlineExtensionRequest } from '@/types';
 
@@ -230,6 +232,30 @@ export default function AgendaDetailPage() {
     }
   };
 
+  // ── 읽음 확인 ────────────────────────────────────────────────────────────────
+  const confirmMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.patch<ApiResponse<{ confirmedAt: string }>>(`/agendas/${id}/confirm`);
+      return data.data;
+    },
+    onSuccess: () => {
+      toast.success('확인했습니다.');
+      queryClient.invalidateQueries({ queryKey: queryKeys.agendas.detail(id!) });
+    },
+    onError: () => {
+      toast.error('확인 처리에 실패했습니다.');
+    },
+  });
+
+  // 현재 로그인 사용자의 확인 여부
+  const myConfirmedAt = myParticipant?.confirmedAt ?? null;
+  // 주관자가 아닌 참여자이면서 아직 확인 안 한 경우만 버튼 노출
+  const canConfirm = Boolean(myParticipant) && myParticipant?.role !== 'ORGANIZER' && !myConfirmedAt;
+
+  // 확인 현황 통계 (주관자 제외)
+  const nonOrganizerParticipants = agenda?.participants.filter((p) => p.role !== 'ORGANIZER') ?? [];
+  const confirmedCount = nonOrganizerParticipants.filter((p) => p.confirmedAt).length;
+
   // 댓글 추가/삭제 후 캐시 무효화
   const refreshComments = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.agendas.detail(id!) });
@@ -312,12 +338,93 @@ export default function AgendaDetailPage() {
 
       <AgendaDetailView agenda={agenda} deadlineDaysLeft={deadlineDaysLeft} />
 
-      {/* 참여자 */}
+      {/* 참여자 & 확인 현황 */}
       <Card className="mb-4">
-        <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">
-          참여자 ({agenda.participants.length})
-        </h3>
-        <ParticipantList participants={agenda.participants} />
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-slate-900 dark:text-white">
+              참여자 ({agenda.participants.length})
+            </h3>
+            {/* 비주관자가 있을 때만 확인 현황 표시 */}
+            {nonOrganizerParticipants.length > 0 && (
+              <span className={clsx(
+                'text-xs px-2 py-0.5 rounded-full font-medium',
+                confirmedCount === nonOrganizerParticipants.length
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                  : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+              )}>
+                {confirmedCount}/{nonOrganizerParticipants.length} 확인
+              </span>
+            )}
+          </div>
+          {/* 내 확인 버튼 */}
+          {canConfirm && (
+            <Button
+              size="sm"
+              onClick={() => confirmMutation.mutate()}
+              isLoading={confirmMutation.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              ✓ 확인했습니다
+            </Button>
+          )}
+        </div>
+
+        {/* 참여자 목록 + 확인 상태 */}
+        <div className="space-y-2">
+          {agenda.participants.map((p) => {
+            const isOrganizer = p.role === 'ORGANIZER';
+            const confirmed = p.confirmedAt;
+            return (
+              <div key={p.user.id} className="flex items-center justify-between gap-2">
+                {/* 아바타 + 이름 + 역할 */}
+                <div className="flex items-center gap-2 min-w-0">
+                  {p.user.profileImage ? (
+                    <img src={p.user.profileImage} alt={p.user.name}
+                      className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-300">
+                        {p.user.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <span className="text-sm text-slate-800 dark:text-slate-200 font-medium truncate block">
+                      {p.user.name}
+                    </span>
+                    {p.user.position && (
+                      <span className="text-xs text-slate-400 dark:text-slate-500 truncate block">
+                        {p.user.position}
+                      </span>
+                    )}
+                  </div>
+                  {isOrganizer && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 font-medium flex-shrink-0">
+                      주관자
+                    </span>
+                  )}
+                </div>
+
+                {/* 확인 상태 (주관자 제외) */}
+                {!isOrganizer && (
+                  confirmed ? (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        {format(new Date(confirmed), 'M/d HH:mm', { locale: ko })}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">미확인</span>
+                  )
+                )}
+              </div>
+            );
+          })}
+        </div>
       </Card>
 
       {/* 첨부파일 */}
