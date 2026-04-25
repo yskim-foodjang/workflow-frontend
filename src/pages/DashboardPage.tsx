@@ -22,6 +22,39 @@ function useDashboardAgendas() {
   });
 }
 
+// ─── 오늘 스케줄 전용 쿼리 (캘린더 API → 반복 인스턴스 포함) ───────────────────
+function useTodaySchedules() {
+  const start = startOfDay(new Date()).toISOString();
+  const end   = endOfDay(new Date()).toISOString();
+  return useQuery({
+    queryKey: queryKeys.agendas.calendar(start, end),
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Agenda[]>>(
+        `/agendas/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+      );
+      return (data.data ?? []).filter((a) => a.category === 'SCHEDULE' && !a.isCompleted);
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+// ─── 반복 여부 판별 ────────────────────────────────────────────────────────────
+function isRecurring(agenda: Agenda): boolean {
+  return agenda.recurrenceParentId != null || (agenda.recurrence?.type ?? 'NONE') !== 'NONE';
+}
+
+// ─── 반복 배지 ────────────────────────────────────────────────────────────────
+function RecurringBadge() {
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 flex-shrink-0 font-medium">
+      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      반복
+    </span>
+  );
+}
+
 // ─── 통계 카드 ────────────────────────────────────────────────────────────────
 function StatCard({ title, value, isLoading, color = '', to }: {
   title: string;
@@ -48,32 +81,36 @@ function StatCard({ title, value, isLoading, color = '', to }: {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: agendas = [], isLoading: agendasLoading } = useDashboardAgendas();
+  const { data: todayScheduleItems = [], isLoading: schedulesLoading } = useTodaySchedules();
   const { notifications, isLoading: notiLoading } = useNotifications();
 
-  const todayAgendas = agendas.filter((a) => {
-    if (a.isCompleted) return false;
-    const now = new Date();
+  const now = new Date();
+
+  // AGENDA 항목: 목록 API (오늘이 시작일~마감일 사이)
+  const todayAgendasFromList = agendas.filter((a) => {
+    if (a.isCompleted || a.category !== 'AGENDA') return false;
     const start = new Date(a.startAt);
-    if (a.category === 'SCHEDULE') {
-      // 오늘 시작하거나, 다일 스케줄이 오늘에 걸쳐 진행 중인 경우
-      const end = a.endAt ? new Date(a.endAt) : start;
-      return start <= endOfDay(now) && end >= startOfDay(now);
-    }
-    // AGENDA: 오늘이 시작일~마감일 사이
     const deadline = a.deadline ? new Date(a.deadline) : null;
     return start <= now && (deadline === null || deadline >= new Date(now.toDateString()));
   });
+
+  // SCHEDULE 항목: 캘린더 API (반복 인스턴스 포함)
+  // 두 배열을 합쳐 startAt 기준 정렬
+  const todayAgendas = [
+    ...todayAgendasFromList,
+    ...todayScheduleItems,
+  ].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
   const weekDeadlines = agendas.filter(
     (a) => !a.isCompleted && a.deadline
       && isThisWeek(new Date(a.deadline), { weekStartsOn: 1 })
-      && new Date(a.deadline) >= startOfDay(new Date())
+      && new Date(a.deadline) >= startOfDay(now)
   );
   const incomplete = agendas.filter((a) => !a.isCompleted);
   const overdue = agendas.filter(
-    (a) => !a.isCompleted && a.deadline && new Date(a.deadline) < startOfDay(new Date())
+    (a) => !a.isCompleted && a.deadline && new Date(a.deadline) < startOfDay(now)
   );
 
-  const isLoading = agendasLoading;
+  const isLoading = agendasLoading || schedulesLoading;
 
   return (
     <div>
@@ -189,6 +226,7 @@ export default function DashboardPage() {
                             {AGENDA_TYPE_LABELS[agenda.type]}
                           </Badge>
                         )}
+                        {isRecurring(agenda) && <RecurringBadge />}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {timeInfo && (
