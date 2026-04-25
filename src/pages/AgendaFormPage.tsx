@@ -195,6 +195,12 @@ export default function AgendaFormPage() {
     let endAt: string | null = null;
     let deadline: string | null = null;
 
+    // 사용자 지정 반복: 요일 미선택 방지
+    if (form.recurrence.type === 'CUSTOM' && (form.recurrence.daysOfWeek ?? []).length === 0) {
+      toast.error('반복 요일을 최소 하나 선택하세요.');
+      return;
+    }
+
     if (form.category === 'AGENDA') {
       if (!form.agendaStartDate) { toast.error('시작 날짜를 입력하세요.'); return; }
       startAt = new Date(`${form.agendaStartDate}T00:00:00`).toISOString();
@@ -370,9 +376,53 @@ export default function AgendaFormPage() {
                   </div>
                 </FormField>
                 <FormField label="반복">
-                  <Select value={form.recurrence.type} onChange={(e) => set('recurrence', { ...form.recurrence, type: e.target.value as RecurrenceConfig['type'] })}>
+                  <Select value={form.recurrence.type} onChange={(e) => {
+                    const newType = e.target.value as RecurrenceConfig['type'];
+                    set('recurrence', {
+                      type: newType,
+                      // CUSTOM 선택 시 시작일 요일을 기본으로 세팅
+                      daysOfWeek: newType === 'CUSTOM'
+                        ? (form.schedStartDate ? [new Date(form.schedStartDate).getDay()] : [])
+                        : undefined,
+                    });
+                  }}>
                     {Object.entries(RECURRENCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </Select>
+
+                  {/* 사용자 지정: 요일 선택 */}
+                  {form.recurrence.type === 'CUSTOM' && (
+                    <div className="mt-3">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">반복 요일 선택 (복수 선택 가능)</p>
+                      <div className="flex gap-1.5">
+                        {['일', '월', '화', '수', '목', '금', '토'].map((label, idx) => {
+                          const selected = (form.recurrence.daysOfWeek ?? []).includes(idx);
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                const current = form.recurrence.daysOfWeek ?? [];
+                                const next = selected
+                                  ? current.filter((d) => d !== idx)
+                                  : [...current, idx].sort((a, b) => a - b);
+                                set('recurrence', { ...form.recurrence, daysOfWeek: next });
+                              }}
+                              className={`w-9 h-9 rounded-full text-sm font-medium transition-colors ${
+                                selected
+                                  ? 'bg-primary-600 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {(form.recurrence.daysOfWeek ?? []).length === 0 && (
+                        <p className="text-xs text-red-500 mt-1.5">최소 하나의 요일을 선택하세요.</p>
+                      )}
+                    </div>
+                  )}
                 </FormField>
               </>
             )}
