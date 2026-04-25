@@ -245,9 +245,10 @@ export default function WeeklyTab({ selectedDate, agendas, holidays, onDateSelec
           </div>
         )}
 
-        {/* Time grid */}
-        <div ref={gridRef} className="overflow-y-auto" style={{ maxHeight: 440 }}>
-          <div className="flex" style={{ height: HOURS.length * HOUR_H }}>
+        {/* Time grid — 스크롤 없이 전체 표시 */}
+        <div ref={gridRef}>
+          {/* pt-3 / pb-2 로 상단 8시 · 하단 18시 레이블 클리핑 방지 */}
+          <div className="flex pt-3 pb-3" style={{ height: HOURS.length * HOUR_H + 24 }}>
             {/* Hour labels */}
             <div className="w-8 flex-shrink-0 relative">
               {HOURS.map((h, i) => (

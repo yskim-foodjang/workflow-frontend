@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useHolidaysMap } from '@/hooks/useHolidays';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -20,6 +21,9 @@ export default function CalendarPicker({
   const [year, setYear] = useState(selected?.getFullYear() ?? today.getFullYear());
   const [month, setMonth] = useState(selected?.getMonth() ?? today.getMonth());
   const ref = useRef<HTMLDivElement>(null);
+
+  // 현재 표시 월의 공휴일 자동 조회 (달 이동 시도 함께 갱신)
+  const holidays = useHolidaysMap(year, month + 1);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -45,6 +49,11 @@ export default function CalendarPicker({
     if (!min) return false;
     const d = new Date(year, month, day);
     return d < min;
+  };
+
+  const getHolidayName = (day: number): string | undefined => {
+    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return holidays.get(key);
   };
 
   const handleSelect = (day: number) => {
@@ -139,34 +148,48 @@ export default function CalendarPicker({
             {cells.map((day, idx) =>
               day === null ? (
                 <div key={`e-${idx}`} />
-              ) : (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => handleSelect(day)}
-                  disabled={isDisabled(day)}
-                  className={`w-full aspect-square flex items-center justify-center text-sm rounded-lg transition-colors
-                    ${isDisabled(day)
-                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
-                      : selected &&
-                        day === selected.getDate() &&
-                        month === selected.getMonth() &&
-                        year === selected.getFullYear()
-                      ? 'bg-primary-600 text-white font-semibold'
-                      : day === today.getDate() &&
-                        month === today.getMonth() &&
-                        year === today.getFullYear()
-                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
-                      : idx % 7 === 0
-                      ? 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20'
-                      : idx % 7 === 6
-                      ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                    }`}
-                >
-                  {day}
-                </button>
-              )
+              ) : (() => {
+                const holidayName = getHolidayName(day);
+                const isHoliday   = !!holidayName;
+                const isSunCol    = idx % 7 === 0;
+                const isSatCol    = idx % 7 === 6;
+                const isSelected  = !!(selected &&
+                  day === selected.getDate() &&
+                  month === selected.getMonth() &&
+                  year === selected.getFullYear());
+                const isTodayCell = day === today.getDate() &&
+                  month === today.getMonth() &&
+                  year === today.getFullYear();
+                const disabled = isDisabled(day);
+                return (
+                  <div key={day} className="flex flex-col items-center" title={holidayName}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(day)}
+                      disabled={disabled}
+                      className={`w-full aspect-square flex items-center justify-center text-sm rounded-lg transition-colors
+                        ${disabled
+                          ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                          : isSelected
+                          ? 'bg-primary-600 text-white font-semibold'
+                          : isTodayCell
+                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold'
+                          : (isSunCol || isHoliday)
+                          ? 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20'
+                          : isSatCol
+                          ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                      {day}
+                    </button>
+                    {/* 공휴일 빨간 점 */}
+                    {isHoliday && !isSelected && (
+                      <div className="w-1 h-1 rounded-full bg-rose-400 -mt-1 mb-0.5" />
+                    )}
+                  </div>
+                );
+              })()
             )}
           </div>
 

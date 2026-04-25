@@ -216,7 +216,8 @@ export default function DailyTab({ selectedDate, agendas, holidays, onDateSelect
 
       {/* ── Hour timeline ────────────────────────────────────── */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div ref={gridRef} className="overflow-y-auto" style={{ maxHeight: 520 }}>
+        {/* pt-3 pb-3 으로 8시·18시 레이블 클리핑 방지, 스크롤 없이 전체 표시 */}
+        <div ref={gridRef} className="pt-3 pb-3">
           <div className="relative" style={{ height: HOURS.length * HOUR_H }}>
             {/* Hour lines */}
             {HOURS.map((h, i) => (

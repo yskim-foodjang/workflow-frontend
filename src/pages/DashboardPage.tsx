@@ -242,6 +242,19 @@ export default function DashboardPage() {
                           </Badge>
                         )}
                         {isRecurring(agenda) && <RecurringBadge />}
+                        {/* 다일 스케줄 진행 중 배지 */}
+                        {isSchedule && (() => {
+                          if (!endDate) return null;
+                          const isMultiDay = !isSameDay(startDate, endDate);
+                          if (!isMultiDay) return null;
+                          const isInProgress = startDate <= now && endDate >= now;
+                          if (!isInProgress) return null;
+                          return (
+                            <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400 flex-shrink-0 font-medium">
+                              진행 중
+                            </span>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {timeInfo && (
