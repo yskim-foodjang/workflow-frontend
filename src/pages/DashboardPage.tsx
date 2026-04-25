@@ -22,8 +22,8 @@ function useDashboardAgendas() {
   });
 }
 
-// ─── 오늘 스케줄 전용 쿼리 (캘린더 API → 반복 인스턴스 포함) ───────────────────
-function useTodaySchedules() {
+// ─── 오늘 반복 인스턴스 전용 쿼리 (캘린더 API → recurrenceParentId 있는 것만) ──
+function useTodayRecurringInstances() {
   const start = startOfDay(new Date()).toISOString();
   const end   = endOfDay(new Date()).toISOString();
   return useQuery({
@@ -32,7 +32,16 @@ function useTodaySchedules() {
       const { data } = await api.get<ApiResponse<Agenda[]>>(
         `/agendas/calendar?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
       );
-      return (data.data ?? []).filter((a) => a.category === 'SCHEDULE' && !a.isCompleted);
+      // 반복 자식 인스턴스만 추출 (캘린더 API에서 오늘 해당 인스턴스만 포함)
+      const todayStart = startOfDay(new Date());
+      const todayEnd   = endOfDay(new Date());
+      return (data.data ?? []).filter((a) => {
+        if (a.category !== 'SCHEDULE' || a.isCompleted) return false;
+        if (!a.recurrenceParentId) return false; // 자식 인스턴스만
+        const s = new Date(a.startAt);
+        const e = a.endAt ? new Date(a.endAt) : s;
+        return s <= todayEnd && e >= todayStart;
+      });
     },
     staleTime: 5 * 60_000,
   });
@@ -81,24 +90,30 @@ function StatCard({ title, value, isLoading, color = '', to }: {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: agendas = [], isLoading: agendasLoading } = useDashboardAgendas();
-  const { data: todayScheduleItems = [], isLoading: schedulesLoading } = useTodaySchedules();
+  const { data: recurringInstances = [], isLoading: recurringLoading } = useTodayRecurringInstances();
   const { notifications, isLoading: notiLoading } = useNotifications();
 
   const now = new Date();
 
-  // AGENDA 항목: 목록 API (오늘이 시작일~마감일 사이)
-  const todayAgendasFromList = agendas.filter((a) => {
-    if (a.isCompleted || a.category !== 'AGENDA') return false;
-    const start = new Date(a.startAt);
+  // 목록 API 기반: 오늘 날짜에 해당하는 항목 (기존 동작 유지)
+  const todayFromList = agendas.filter((a) => {
+    if (a.isCompleted) return false;
+    const s = new Date(a.startAt);
+    if (a.category === 'SCHEDULE') {
+      // 오늘 날짜와 스케줄 기간이 겹치는 것만
+      const e = a.endAt ? new Date(a.endAt) : s;
+      return s <= endOfDay(now) && e >= startOfDay(now);
+    }
+    // AGENDA: 시작일 ~ 마감일 사이
     const deadline = a.deadline ? new Date(a.deadline) : null;
-    return start <= now && (deadline === null || deadline >= new Date(now.toDateString()));
+    return s <= now && (deadline === null || deadline >= new Date(now.toDateString()));
   });
 
-  // SCHEDULE 항목: 캘린더 API (반복 인스턴스 포함)
-  // 두 배열을 합쳐 startAt 기준 정렬
+  // 캘린더 API에서 오늘 해당 반복 자식 인스턴스 추가 (목록 API에 없는 것만)
+  const listIds = new Set(todayFromList.map((a) => a.id));
   const todayAgendas = [
-    ...todayAgendasFromList,
-    ...todayScheduleItems,
+    ...todayFromList,
+    ...recurringInstances.filter((a) => !listIds.has(a.id)),
   ].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
   const weekDeadlines = agendas.filter(
     (a) => !a.isCompleted && a.deadline
@@ -110,7 +125,7 @@ export default function DashboardPage() {
     (a) => !a.isCompleted && a.deadline && new Date(a.deadline) < startOfDay(now)
   );
 
-  const isLoading = agendasLoading || schedulesLoading;
+  const isLoading = agendasLoading || recurringLoading;
 
   return (
     <div>
